@@ -11,6 +11,7 @@ class Traitement_image:
         self.rural=None
         self.urbain= None
         self.marin=None
+
 class Kmeans(Traitement_image):
     def k_means(self, img, k=3):
         """
