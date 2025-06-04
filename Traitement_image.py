@@ -12,7 +12,8 @@ class Traitement_image:
         self.rural = None
         self.urbain = None
         self.marin = None
-        self.route= None
+        self.routes= None
+        self.trait_de_cote= None
 
     def tracer_trait_de_cote(self, output_file: str = "trait_de_cote_rouge.png", seuil: float = 0.5):
         """
@@ -43,33 +44,31 @@ class Traitement_image:
 
         # 4. Seuil pour obtenir un trait fin
         trait_de_cote = grad > seuil
-
-        # 5. Superposer le trait rouge
-        img_trait = img_array.copy()
-        img_trait[trait_de_cote] = [255, 0, 0]
-
-        # 6. Sauvegarde
-        Image.fromarray(img_trait).save(output_file)
-        Image.fromarray(img_trait).show()
+        self.trait_de_cote= trait_de_cote
 
     def creer_masques_couleurs(self):
         """
-        Crée des masques booléens pour les pixels exactement :
-        - bleu  = [0, 0, 255]
-        - vert  = [0, 255, 0]
-        - rouge = [255, 0, 0]
-        - jaune = [255, 255, 0]
-        et stocke ces masques dans self.bleu, self.vert, self.rouge et self.jaune.
+        Crée des masques booléens pour les pixels segmentés en :
+        - marin  = [0, 0, 255]
+        - rural  = [34, 139, 34]
+        - urbain = [105, 105, 105]
+        - routes = [255, 215, 0]
+        d’après les couleurs utilisées pour K-means. Stocke ces masques
+        dans self.marin, self.rural, self.urbain et self.route.
         """
         arr = self.img_array
-        # Bleu
-        self.bleu = (arr[:, :, 0] == 0) & (arr[:, :, 1] == 0) & (arr[:, :, 2] == 255)
-        # Vert
-        self.vert = (arr[:, :, 0] == 0) & (arr[:, :, 1] == 255) & (arr[:, :, 2] == 0)
-        # Rouge
-        self.rouge = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 0) & (arr[:, :, 2] == 0)
-        # Jaune
-        self.jaune = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 255) & (arr[:, :, 2] == 0)
+
+        # Marin (bleu)
+        self.marin = (arr[:, :, 0] == 0) & (arr[:, :, 1] == 0) & (arr[:, :, 2] == 255)
+
+        # Rural (vert foncé)
+        self.rural = (arr[:, :, 0] == 34) & (arr[:, :, 1] == 139) & (arr[:, :, 2] == 34)
+
+        # Urbain (gris foncé)
+        self.urbain = (arr[:, :, 0] == 105) & (arr[:, :, 1] == 105) & (arr[:, :, 2] == 105)
+
+        # Routes (jaune doré)
+        self.routes = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 215) & (arr[:, :, 2] == 0)
 
 
 class Kmean(Traitement_image):
@@ -195,13 +194,13 @@ class Moyenne_couleur(Traitement_image):
         r, g, b = moyenne
         adapt = max(10, seuil_dom - int((r + g + b) / 15))
         if b > 200 and b > r and b > g:
-            return (0, 0, 255)
+            return (0,   0,   255)
         if b > g + adapt and b > r + adapt:
             return (0, 0, 255)
         elif g > r + adapt and g > b + adapt:
-            return (0, 255, 0)
+            return (34, 139,  34)
         else:
-            return (127, 127, 127)
+            return (105, 105, 105)
 
     def moy_une_tuile(self, tile_array: np.ndarray) -> tuple:
         moyenne = tile_array.reshape(-1, 3).mean(axis=0)
@@ -254,6 +253,4 @@ class Moyenne_couleur(Traitement_image):
 
 
 if __name__ == "__main__":
-    # Exemple d'utilisation de la détection du trait de côte sur une image reconstruite
-    ti = Traitement_image("Kmean.png")
-    ti.tracer_trait_de_cote()
+    Moyenne_couleur("Ploug.png")
