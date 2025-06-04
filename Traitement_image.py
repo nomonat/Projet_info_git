@@ -1,0 +1,178 @@
+import numpy as np
+from PIL import Image
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+
+class Traitement_image:
+    def __init__(self, file):
+        self.img = Image.open(file).convert("RGB")
+        self.img_array = np.array(self.img)
+        self.hauteur, self.largeur, _ = self.img_array.shape
+
+class Kmeans(Traitement_image):
+    def __init__(self, file=None):
+        super().__init__(file)
+        self.segmented_img = None
+        self.labels = None
+
+    def k_means(self, k=3):
+        """
+        Applique le clustering K-means sur l'image chargée.
+        """
+        if self.img is None:
+            raise ValueError("Aucune image chargée. Utilisez ouvrir_image(file) d'abord.")
+
+        img_np = np.array(self.img)
+        h, w, d = img_np.shape
+        pixels = img_np.reshape((-1, 3))
+
+        # Centres initiaux (eau, rural, urbain)
+        initial_centers = np.array([
+            [195, 229, 235],  # Bleu
+            [218, 238, 199],  # Vert
+            [255, 255, 249]   # Pâle
+        ], dtype=np.uint8)
+
+        kmeans = SKKMeans(n_clusters=k, init=initial_centers, n_init=1, random_state=0)
+        kmeans.fit(pixels)
+        self.labels = kmeans.labels_
+
+        cluster_colors = np.array([
+            [0, 0, 255],    # Eau
+            [34, 139, 34],  # Rural
+            [105, 105, 105] # Urbain
+        ])
+        colored_pixels = cluster_colors[self.labels].reshape((h, w, 3)).astype(np.uint8)
+        self.segmented_img = Image.fromarray(colored_pixels)
+
+        return self.segmented_img
+
+    def afficher_paysage(self, type_paysage="all"):
+        if self.img is None or self.segmented_img is None or self.labels is None:
+            print("Données manquantes (image, segmentation ou labels).")
+            return
+
+        paysages = {
+            "aquatique": 0,
+            "rural": 1,
+            "urbain": 2
+        }
+
+        if type_paysage == "all":
+            types_a_afficher = list(paysages.keys())
+        elif isinstance(type_paysage, str) and type_paysage.lower() in paysages:
+            types_a_afficher = [type_paysage.lower()]
+        else:
+            print("Type de paysage invalide.")
+            return
+
+        base_img = np.array(self.img).copy()
+        segmented_array = np.array(self.segmented_img)
+
+        for type_ in types_a_afficher:
+            label = paysages[type_]
+            masque = (self.labels.reshape(base_img.shape[:2]) == label)
+            base_img[masque] = segmented_array[masque]
+
+        image_resultat = Image.fromarray(base_img)
+        plt.figure(figsize=(6, 6))
+        plt.imshow(image_resultat)
+        plt.title(f"Superposition : {', '.join(types_a_afficher)}")
+        plt.axis("off")
+        plt.show()
+
+class MoyenneCouleur(Traitement_image):
+    def quelle_couleur(self, moyenne, seuil_dom=30):
+        r, g, b = moyenne
+        adapt = max(10, seuil_dom - int((r + g + b) / 15))
+        if b > 200 and b > r and b > g:
+            return (0, 0, 255)
+        if b > g + adapt and b > r + adapt:
+            return (0, 0, 255)
+        elif g > r + adapt and g > b + adapt:
+            return (0, 255, 0)
+        else:
+            return (127, 127, 127)
+
+    def moy_une_tuile(self, tile):
+        h, w, _ = tile.shape
+        moyenne = tile.reshape(-1, 3).mean(axis=0)
+        return self.quelle_couleur(moyenne)
+
+    def decouper_image_en_tuiles(self, l_tuile):
+        nb_tuiles_x = (self.largeur + l_tuile - 1) // l_tuile
+        nb_tuiles_y = (self.hauteur + l_tuile - 1) // l_tuile
+        RGB = np.zeros((nb_tuiles_x, nb_tuiles_y, 3))
+
+        for j in range(nb_tuiles_y):
+            for i in range(nb_tuiles_x):
+                x = i * l_tuile
+                y = j * l_tuile
+                tile = self.img_array[y:min(y + l_tuile, self.hauteur), x:min(x + l_tuile, self.largeur)]
+                RGB[i, j] = self.moy_une_tuile(tile)
+
+        return RGB, l_tuile
+
+    def construire_image_moyenne(self, RGB, l_tuile, nom="image_reconstruite.png"):
+        hauteur = RGB.shape[1] * l_tuile
+        largeur = RGB.shape[0] * l_tuile
+        image = Image.new("RGB", (largeur, hauteur))
+        draw = ImageDraw.Draw(image)
+
+        for x in range(RGB.shape[0]):
+            for y in range(RGB.shape[1]):
+                color = tuple(map(int, RGB[x, y]))
+                for i in range(l_tuile):
+                    for j in range(l_tuile):
+                        xi = x * l_tuile + i
+                        yj = y * l_tuile + j
+                        if xi < largeur and yj < hauteur:
+                            draw.point((xi, yj), fill=color)
+
+        image.save(nom)
+        print(f"Image enregistrée sous {nom}")
+
+    def variance_acceptable(self, tile_array, seuil_variance=1000):
+        pixels = tile_array.reshape(-1, 3)
+        var = np.var(pixels, axis=0)
+        return np.mean(var) < seuil_variance
+
+    def tuiles_variance_test(self, l_tuile, seuil_variance):
+        nb_x = (self.largeur + l_tuile - 1) // l_tuile
+        nb_y = (self.hauteur + l_tuile - 1) // l_tuile
+
+        for j in range(nb_y):
+            for i in range(nb_x):
+                x = i * l_tuile
+                y = j * l_tuile
+                tile = self.img_array[y:min(y + l_tuile, self.hauteur), x:min(x + l_tuile, self.largeur)]
+                if not self.variance_acceptable(tile, seuil_variance):
+                    return False
+        return True
+
+    def l_tuile_max_recursive_desc(self, l_tuile, step, seuil_variance=1000):
+        if l_tuile <= 1:
+            return 1
+        if self.tuiles_variance_test(l_tuile, seuil_variance):
+            return l_tuile
+        else:
+            return self.l_tuile_max_recursive_desc(l_tuile - step, step, seuil_variance)
+
+    def traitement_image_auto_desc(self, seuil_variance=1000, step=2):
+        l_tuile_max = min(self.hauteur, self.largeur)
+        taille_optimale = self.l_tuile_max_recursive_desc(l_tuile_max, step, seuil_variance)
+        print(f"Taille de tuile optimale trouvée (desc): {taille_optimale}")
+        RGB_result, l_tuile = self.decouper_image_en_tuiles(taille_optimale)
+        self.construire_image_moyenne(RGB_result, l_tuile)
+
+    def afficher_variance_tuile(self, l_tuile, x, y):
+        tile = self.img_array[y:y + l_tuile, x:x + l_tuile]
+        pixels = tile.reshape(-1, 3)
+        var = np.var(pixels, axis=0)
+        print(f"Variance R,G,B: {var}, Moyenne: {np.mean(var)}")
+
+
+if __name__=="__main__":
+    traitement = Kmeans("ploug.png")
+    traitement.k_means()
+    traitement.afficher_paysage("all")
