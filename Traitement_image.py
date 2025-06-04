@@ -1,5 +1,5 @@
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 
@@ -10,76 +10,46 @@ class Traitement_image:
         self.hauteur, self.largeur, _ = self.img_array.shape
 
 class Kmeans(Traitement_image):
-    def __init__(self, file=None):
-        super().__init__(file)
-        self.segmented_img = None
-        self.labels = None
-
-    def k_means(self, k=3):
+    def k_means(self, img, k=3):
         """
-        Applique le clustering K-means sur l'image chargée.
+        Appliquer K-means pour segmenter l'image en 3 zones spécifiques (bleu, vert, pâle).
+        :param img: Image d'entrée à segmenter
+        :param k: Nombre de clusters (zones)
+        :return: L'image segmentée et les labels des pixels
         """
-        if self.img is None:
-            raise ValueError("Aucune image chargée. Utilisez ouvrir_image(file) d'abord.")
-
+        self.img = img.convert("RGB")  # Stocke l'image reçue en entrée
+        # Convertir l'image en tableau numpy
         img_np = np.array(self.img)
         h, w, d = img_np.shape
         pixels = img_np.reshape((-1, 3))
 
-        # Centres initiaux (eau, rural, urbain)
+        # Couleurs spécifiques à utiliser pour les clusters
         initial_centers = np.array([
             [195, 229, 235],  # Bleu
             [218, 238, 199],  # Vert
             [255, 255, 249]   # Pâle
         ], dtype=np.uint8)
 
-        kmeans = SKKMeans(n_clusters=k, init=initial_centers, n_init=1, random_state=0)
+        # Appliquer K-means en initialisant les centres avec les couleurs spécifiques
+        kmeans = KMeans(n_clusters=k, init=initial_centers, n_init=1, random_state=0)
         kmeans.fit(pixels)
+
+        # Obtenir les labels des pixels
         self.labels = kmeans.labels_
 
+        # Appliquer les couleurs aux pixels en fonction des labels (reconstruction de l'image segmentée)
         cluster_colors = np.array([
-            [0, 0, 255],    # Eau
-            [34, 139, 34],  # Rural
-            [105, 105, 105] # Urbain
+            [0, 0, 255],    # Bleu (eau)
+            [34, 139, 34],  # Vert (rural)
+            [105, 105, 105] # Gris foncé (urbain)
         ])
-        colored_pixels = cluster_colors[self.labels].reshape((h, w, 3)).astype(np.uint8)
+        colored_pixels = cluster_colors[self.labels].reshape((h, w, 3))
+
+        # Convertir le tableau numpy en image avec le bon type de données
+        colored_pixels = np.array(colored_pixels, dtype=np.uint8)
         self.segmented_img = Image.fromarray(colored_pixels)
 
         return self.segmented_img
-
-    def afficher_paysage(self, type_paysage="all"):
-        if self.img is None or self.segmented_img is None or self.labels is None:
-            print("Données manquantes (image, segmentation ou labels).")
-            return
-
-        paysages = {
-            "aquatique": 0,
-            "rural": 1,
-            "urbain": 2
-        }
-
-        if type_paysage == "all":
-            types_a_afficher = list(paysages.keys())
-        elif isinstance(type_paysage, str) and type_paysage.lower() in paysages:
-            types_a_afficher = [type_paysage.lower()]
-        else:
-            print("Type de paysage invalide.")
-            return
-
-        base_img = np.array(self.img).copy()
-        segmented_array = np.array(self.segmented_img)
-
-        for type_ in types_a_afficher:
-            label = paysages[type_]
-            masque = (self.labels.reshape(base_img.shape[:2]) == label)
-            base_img[masque] = segmented_array[masque]
-
-        image_resultat = Image.fromarray(base_img)
-        plt.figure(figsize=(6, 6))
-        plt.imshow(image_resultat)
-        plt.title(f"Superposition : {', '.join(types_a_afficher)}")
-        plt.axis("off")
-        plt.show()
 
 class MoyenneCouleur(Traitement_image):
     def quelle_couleur(self, moyenne, seuil_dom=30):
