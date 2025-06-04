@@ -89,7 +89,7 @@ if __name__ == "__main__":
     traitement = TraitementImage()
 
     segmentee = traitement.k_means(img, k=4)  # k=4 pour inclure les routes
-    traitement.afficher_paysage("all")        # Afficher toutes les zones
+    traitement.afficher_paysage("routes")        # Afficher toutes les zones
 
 
 
