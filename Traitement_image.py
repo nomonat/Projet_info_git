@@ -1,5 +1,6 @@
 import numpy as np
 from PIL import Image
+from scipy import ndimage
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 
@@ -11,35 +12,93 @@ class Traitement_image:
         self.rural = None
         self.urbain = None
         self.marin = None
+        self.route= None
+
+    def tracer_trait_de_cote(self, output_file: str = "trait_de_cote_rouge.png", seuil: float = 0.5):
+        """
+        Détecte les pixels bleus (== [0,0,255]) dans self.img_array, calcule
+        le bord (trait de côte) avec un opérateur de Sobel, puis superpose
+        ce trait en rouge sur l’image et sauvegarde le résultat.
+
+        - output_file : nom du fichier PNG de sortie
+        - seuil       : seuil sur l’amplitude du gradient pour tracer le trait
+        """
+        img_array = self.img_array
+
+        # 1. Masque binaire des pixels exactement bleus
+        masque_bleu = np.zeros((self.hauteur, self.largeur), dtype=bool)
+        for y in range(self.hauteur):
+            for x in range(self.largeur):
+                pixel = img_array[y, x]
+                if (pixel[0] == 0) and (pixel[1] == 0) and (pixel[2] == 255):
+                    masque_bleu[y, x] = True
+
+        # 2. Convertir en float pour calcul Sobel
+        masque_flou = masque_bleu.astype(float)
+
+        # 3. Calcul des gradients de Sobel
+        grad_x = ndimage.sobel(masque_flou, axis=1)
+        grad_y = ndimage.sobel(masque_flou, axis=0)
+        grad = np.hypot(grad_x, grad_y)
+
+        # 4. Seuil pour obtenir un trait fin
+        trait_de_cote = grad > seuil
+
+        # 5. Superposer le trait rouge
+        img_trait = img_array.copy()
+        img_trait[trait_de_cote] = [255, 0, 0]
+
+        # 6. Sauvegarde
+        Image.fromarray(img_trait).save(output_file)
+        Image.fromarray(img_trait).show()
+
+    def creer_masques_couleurs(self):
+        """
+        Crée des masques booléens pour les pixels exactement :
+        - bleu  = [0, 0, 255]
+        - vert  = [0, 255, 0]
+        - rouge = [255, 0, 0]
+        - jaune = [255, 255, 0]
+        et stocke ces masques dans self.bleu, self.vert, self.rouge et self.jaune.
+        """
+        arr = self.img_array
+        # Bleu
+        self.bleu = (arr[:, :, 0] == 0) & (arr[:, :, 1] == 0) & (arr[:, :, 2] == 255)
+        # Vert
+        self.vert = (arr[:, :, 0] == 0) & (arr[:, :, 1] == 255) & (arr[:, :, 2] == 0)
+        # Rouge
+        self.rouge = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 0) & (arr[:, :, 2] == 0)
+        # Jaune
+        self.jaune = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 255) & (arr[:, :, 2] == 0)
+
 
 class Kmean(Traitement_image):
     def __init__(self, file: str, k: int = 4):
         """
-        Initialisation de la classe : charge l’image, lance la segmentation K-means,
-        affiche et enregistre le résultat, puis permet d’afficher un paysage.
+        Initialisation : charge l’image, segmente dès l’instanciation,
+        affiche et enregistre le résultat.
         """
         super().__init__(file)
         self.segmented_img = None
         self.labels = None
 
-        # 1) Exécute la segmentation K-means dès l'instanciation
+        # 1) Exécute la segmentation K-means
         img_segmentee = self.k_means(k)
 
         # 2) Affiche et enregistre l’image segmentée
         img_segmentee.show()
         img_segmentee.save("Kmean.png")
+        self.creer_masques_couleurs()
 
     def k_means(self, k: int = 4):
         """
         Appliquer K-means pour segmenter l'image chargée (self.img_array)
-        en 4 zones spécifiques (eau, rural, urbain, routes).
-        Retourne l'image segmentée.
+        en 4 zones : eau, rural, urbain, routes. Retourne l’image segmentée.
         """
         img_np = self.img_array
         h, w, _ = img_np.shape
         pixels = img_np.reshape((-1, 3))
 
-        # Centres initiaux pour les 4 types de zones
         initial_centers = np.array([
             [195, 229, 235],  # Bleu (eau)
             [218, 238, 199],  # Vert clair (rural)
@@ -49,34 +108,27 @@ class Kmean(Traitement_image):
 
         kmeans = KMeans(n_clusters=k, init=initial_centers, n_init=1, random_state=0)
         kmeans.fit(pixels)
-
         self.labels = kmeans.labels_
 
-        # Couleurs pour afficher chaque zone
         cluster_colors = np.array([
             [0,   0,   255],  # Eau
             [34, 139,  34],   # Rural
             [105, 105, 105],  # Urbain
-            [255, 215,   0]   # Routes (jaune doré)
+            [255, 215,   0]   # Routes
         ])
         colored_pixels = cluster_colors[self.labels].reshape((h, w, 3))
         self.segmented_img = Image.fromarray(colored_pixels.astype(np.uint8))
-
         return self.segmented_img
 
     def afficher_paysage(self, type_paysage: str = "all"):
         """
-        Superpose sur l'image originale les zones segmentées issues de la segmentation K-means,
-        selon les types de paysages spécifiés.
-
-        Args:
-            type_paysage (str): "aquatique", "rural", "urbain", "routes" ou "all".
+        Superpose sur l'image originale les zones segmentées (K-means),
+        selon le type de paysage ("aquatique", "rural", "urbain", "routes" ou "all").
         """
         if self.img is None or self.segmented_img is None or self.labels is None:
             print("Données manquantes pour l'affichage.")
             return
 
-        # Ajout du type "routes"
         paysages = {
             "aquatique": 0,
             "rural": 1,
@@ -95,7 +147,6 @@ class Kmean(Traitement_image):
 
         base_img = self.img_array.copy()
         segmented_array = np.array(self.segmented_img)
-
         for type_ in types_a_afficher:
             label = paysages[type_]
             masque = (self.labels.reshape(base_img.shape[:2]) == label)
@@ -108,29 +159,24 @@ class Kmean(Traitement_image):
         plt.axis("off")
         plt.show()
 
+
 class Moyenne_couleur(Traitement_image):
     def __init__(self, file: str, seuil_variance: float = 200):
         """
         - file : chemin vers l’image à traiter
         - seuil_variance : variance maximale pour considérer une tuile homogène
 
-        À l’instanciation, on construit automatiquement l’arbre et on reconstruit l’image,
-        puis on affiche le résultat.
+        À l’instanciation, construit l’arbre quadtree et reconstruit l’image.
         """
         super().__init__(file)
         self.seuil_variance = seuil_variance
-        self.tree = None
-
-        # 1) Construire l’arbre de segmentation (quadtree)
         self.tree = self.recurrence(self.img_array)
 
-        # 2) Reconstruire l’image à partir de cet arbre
         reconstructed_array = self.build_reconstructed()
-
-        # 3) Convertir en PIL Image et afficher
         reconstructed_img = Image.fromarray(reconstructed_array)
         reconstructed_img.show()
         reconstructed_img.save("Moyenne_couleur.png")
+        self.creer_masques_couleurs()
 
     def variance_tile(self, tile_array: np.ndarray) -> np.ndarray:
         h_tile, w_tile, _ = tile_array.shape
@@ -206,5 +252,8 @@ class Moyenne_couleur(Traitement_image):
         if tree[3] is not None:
             self._reconstruct_image(tree[3], canvas, x0+mid_x,  y0+mid_y,  h-mid_y, w-mid_x)
 
+
 if __name__ == "__main__":
-    Kmean("Ploug.png")
+    # Exemple d'utilisation de la détection du trait de côte sur une image reconstruite
+    ti = Traitement_image("Kmean.png")
+    ti.tracer_trait_de_cote()
