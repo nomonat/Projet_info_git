@@ -8,7 +8,9 @@ class Traitement_image:
         self.img = Image.open(file).convert("RGB")
         self.img_array = np.array(self.img)
         self.hauteur, self.largeur, _ = self.img_array.shape
-
+        self.rural=None
+        self.urbain= None
+        self.marin=None
 class Kmeans(Traitement_image):
     def k_means(self, img, k=3):
         """

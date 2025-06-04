@@ -64,7 +64,7 @@ class Mission():
 # Exemple : Finistère
 min_lat, min_lon = 47.7, -5.1
 max_lat, max_lon = 48.8, -3.2
-zoom = 6
+zoom = 12
 if __name__ == "__main__":
     Mission_test=Mission("test",1,min_lat,max_lat,min_lon,max_lon,[zoom])
     Mission_test.lancer_reconnaissance()
