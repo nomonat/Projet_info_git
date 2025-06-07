@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
+import os
+import math
+import requests
+from io import BytesIO
+from PIL import Image, ImageEnhance
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
+
+from Drone import Drone  # importe la classe Drone du script Drone.py
 
 class CheckableMenu(QtWidgets.QMenu):
     def __init__(self, parent=None):
@@ -62,8 +71,6 @@ class Ui_MainWindow(object):
         self.terrainButton = QtWidgets.QToolButton(self.horizontalLayoutWidget)
         self.terrainButton.setText("Terrain")
         self.terrainButton.setPopupMode(QtWidgets.QToolButton.InstantPopup)
-
-        # Utiliser le menu avec checkboxes qui ne se ferme pas automatiquement
         self.terrainMenu = CheckableMenu(MainWindow)
         self.terrainButton.setMenu(self.terrainMenu)
         self.horizontalLayout.addWidget(self.terrainButton)
@@ -124,10 +131,18 @@ class Ui_MainWindow(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
-        self.menubar.addAction(self.menuFin.menuAction())
-
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+        # Connexions aux actions Drone
+        self.drone = Drone()
+        self.pushButton_5.clicked.connect(self._capture)
+        self.pushButton.clicked.connect(lambda: self._move("gauche"))
+        self.pushButton_2.clicked.connect(lambda: self._move("haut"))
+        self.pushButton_3.clicked.connect(lambda: self._move("bas"))
+        self.pushButton_4.clicked.connect(lambda: self._move("droite"))
+        self.pushButton_6.clicked.connect(self._save)
+        self.pushButton_7.clicked.connect(QtWidgets.qApp.quit)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -135,11 +150,51 @@ class Ui_MainWindow(object):
         self.pushButton_5.setText(_translate("MainWindow", "Lancer"))
         self.pushButton_6.setText(_translate("MainWindow", "Enregistrer la vue"))
         self.pushButton_7.setText(_translate("MainWindow", "Fin de la mission"))
-        self.label.setText(_translate("MainWindow", "TextLabel"))
+        self.label.setText(_translate("MainWindow", "Zone de déplacement"))
         self.pushButton_2.setText(_translate("MainWindow", "Haut"))
         self.pushButton.setText(_translate("MainWindow", "Gauche"))
         self.pushButton_3.setText(_translate("MainWindow", "Bas"))
         self.pushButton_4.setText(_translate("MainWindow", "Droite"))
+
+    # Méthodes liées au Drone
+    def _display(self, pil_img):
+        data = pil_img.tobytes('raw', 'RGB')
+        qimg = QtGui.QImage(data, pil_img.width, pil_img.height, QtGui.QImage.Format_RGB888)
+        pix = QtGui.QPixmap.fromImage(qimg)
+        scene = QtWidgets.QGraphicsScene()
+        scene.addPixmap(pix)
+        self.graphicsView.setScene(scene)
+        self.graphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
+
+    def _capture(self):
+        # On centre sur la même zone définie en dur
+        lat_min, lon_min, lat_max, lon_max = 47.7, -5.1, 48.8, -3.2
+        lat = (lat_min + lat_max) / 2
+        lon = (lon_min + lon_max) / 2
+        zoom = int(self.comboBox.currentText().split(':')[1])
+        self.drone.capture_image(lat, lon, zoom)
+        self._display(self.drone.captured_image)
+
+    def _move(self, direction):
+        # 1) Mise à jour des indices et téléchargement de la nouvelle tuile
+        self.drone.deplacement(direction)
+
+        # 2) On recolle toutes les tuiles visitées en une seule mosaïque
+        #    (le paramètre est optionnel, par défaut ça crée 'mosaic.png')
+        self.drone.recoller("current_mosaic.png")
+
+        # 3) Affichage de la mosaïque dans le GraphicsView
+        self._display(self.drone.captured_image)
+
+
+    def _save(self):
+        if not self.drone.captured_image:
+            QMessageBox.warning(None, "Erreur", "Aucune image à enregistrer.")
+            return
+        path, _ = QFileDialog.getSaveFileName(None, "Enregistrer la vue", "", "PNG (*.png)")
+        if path:
+            self.drone.captured_image.save(path)
+            QMessageBox.information(None, "Enregistré", f"Image sauvegardée dans:\n{path}")
 
 if __name__ == "__main__":
     import sys
