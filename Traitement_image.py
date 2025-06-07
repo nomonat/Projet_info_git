@@ -159,7 +159,7 @@ class Kmean(Traitement_image):
 
 
 class Moyenne_couleur(Traitement_image):
-    def __init__(self, file: str, seuil_variance: float = 200):
+    def __init__(self, file: str, seuil_variance= 100):
         """
         - file : chemin vers l’image à traiter
         - seuil_variance : variance maximale pour considérer une tuile homogène
@@ -187,7 +187,7 @@ class Moyenne_couleur(Traitement_image):
                     V[k] += diff ** 2
 
         return V / (h_tile * w_tile)
-
+"""Quelle couleur 1 pas ouf pour ces cartes
     def quelle_couleur(self, moyenne: np.ndarray, seuil_dom: int = 30) -> tuple:
         r, g, b = moyenne
         adapt = max(10, seuil_dom - int((r + g + b) / 15))
@@ -199,32 +199,79 @@ class Moyenne_couleur(Traitement_image):
             return (34, 139,  34)
         else:
             return (105, 105, 105)
+            """
+
+def quelle_couleur(self, moyenne: np.ndarray) -> tuple:
+    """
+    À partir d'une moyenne [R, G, B] exactement égale à l'un
+    de vos centres initiaux, renvoie la couleur correspondante :
+      [195,229,235] → (0, 0, 255)
+      [218,238,199] → (34,139,34)
+      [255,255,249] → (105,105,105)
+      [255,255,150] → (255,215,0)
+    Sinon retourne du gris par défaut.
+    """
+    # on convertit en entiers
+    r, g, b = map(int, moyenne)
+
+    if (r, g, b) == (195, 229, 235):
+        return (0, 0, 255)        # Bleu (eau)
+    elif (r, g, b) == (218, 238, 199):
+        return (34, 139, 34)      # Vert clair (rural)
+    elif (r, g, b) == (255, 255, 249):
+        return (105, 105, 105)    # Gris foncé (urbain)
+    elif (r, g, b) == (255, 255, 150):
+        return (255, 215, 0)      # Jaune (routes)
+    else:
+        return (127, 127, 127)    # Gris neutre si non reconnu
 
     def moy_une_tuile(self, tile_array: np.ndarray) -> tuple:
         moyenne = tile_array.reshape(-1, 3).mean(axis=0)
         return self.quelle_couleur(moyenne)
 
     def recurrence(self, tile_array: np.ndarray):
+        """
+        Si la variance RGB de `tile_array` est entièrement < seuil_variance,
+        renvoie la couleur dominante de cette tuile (R,G,B).
+        Sinon, découpe `tile_array` en 4 sous-tuiles et appelle récursivement.
+        """
         h, w, _ = tile_array.shape
-        var_rgb = self.variance_tile(tile_array)
 
-        if (var_rgb < self.seuil_variance).all():
+        # BASE CASES: empty or too small to split further
+        if h == 0 or w == 0:
+            # no pixels: fallback to gray
+            return (127,127,127)
+        if h == 1 and w == 1:
+            # single pixel: it's homogeneous by definition
             return self.moy_une_tuile(tile_array)
 
+        var_rgb = self.variance_tile(tile_array)
+        if (var_rgb < self.seuil_variance).all():
+            # homogeneous enough: stop recursion
+            return self.moy_une_tuile(tile_array)
+
+        # Otherwise split in four—but only if both halves are at least size 1
         mid_y = h // 2
         mid_x = w // 2
 
-        arr_tl = tile_array[0:mid_y, 0:mid_x]
-        arr_tr = tile_array[0:mid_y, mid_x:w]
-        arr_bl = tile_array[mid_y:h, 0:mid_x]
-        arr_br = tile_array[mid_y:h, mid_x:w]
+        # If either mid is zero (i.e. tile <2 in one dimension), stop here
+        if mid_x == 0 or mid_y == 0:
+            return self.moy_une_tuile(tile_array)
 
+        # Extract quadrants
+        arr_tl = tile_array[0:mid_y,      0:mid_x]
+        arr_tr = tile_array[0:mid_y,      mid_x:w]
+        arr_bl = tile_array[mid_y:h,      0:mid_x]
+        arr_br = tile_array[mid_y:h,      mid_x:w]
+
+        # Recurse
         res_tl = self.recurrence(arr_tl)
         res_tr = self.recurrence(arr_tr)
         res_bl = self.recurrence(arr_bl)
         res_br = self.recurrence(arr_br)
 
         return [res_tl, res_tr, res_bl, res_br]
+
 
     def build_reconstructed(self) -> np.ndarray:
         canvas = np.zeros((self.hauteur, self.largeur, 3), dtype=np.uint8)
@@ -251,4 +298,5 @@ class Moyenne_couleur(Traitement_image):
 
 
 if __name__ == "__main__":
-    Moyenne_couleur("Ploug.png")
+    img = np.array(Image.open("riviere.png").convert("RGB"))
+    print(img)
