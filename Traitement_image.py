@@ -85,7 +85,6 @@ class Kmean(Traitement_image):
         img_segmentee = self.k_means(k)
 
         # 2) Affiche et enregistre l’image segmentée
-        img_segmentee.show()
         img_segmentee.save("Kmean.png")
         self.creer_masques_couleurs()
 
@@ -173,7 +172,6 @@ class Moyenne_couleur(Traitement_image):
 
         reconstructed_array = self.build_reconstructed()
         reconstructed_img = Image.fromarray(reconstructed_array)
-        reconstructed_img.show()
         reconstructed_img.save("Moyenne_couleur.png")
         self.creer_masques_couleurs()
 

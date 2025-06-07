@@ -120,14 +120,14 @@ class Drone:
         self.visited_tiles.append((self.x, self.y, self.zoom))
         print(f"Tuiles sauvegardée : {path}")
 
-    def recoller(self, output_file: str = "mosaic.png"):
+    def recoller(self, output_file: str = "mosaic.png") -> Image.Image:
         """
-        Reconstruit une mosaïque de toutes les tuiles téléchargées,
-        dessine un marqueur sur la tuile courante, sauvegarde et met à jour self.captured_image.
+        Reconstruit une mosaïque de toutes les tuiles déjà téléchargées,
+        la sauvegarde sous `output_file` et la renvoie comme PIL.Image.
         """
         if not self.visited_tiles:
             print("Aucune tuile à recoller.")
-            return
+            return None
 
         tile_size = 256
         xs = [t[0] for t in self.visited_tiles]
@@ -135,29 +135,23 @@ class Drone:
         min_x, max_x = min(xs), max(xs)
         min_y, max_y = min(ys), max(ys)
 
-        # Création de la mosaïque vierge
         width  = (max_x - min_x + 1) * tile_size
         height = (max_y - min_y + 1) * tile_size
         mosaic = Image.new("RGB", (width, height))
 
-        # Collage
-        for x, y, z in self.visited_tiles:
-            path = f"tiles/tuile_{z}_{x}_{y}.png"
+        for x, y, zoom in self.visited_tiles:
+            path = f"tiles/tuile_{zoom}_{x}_{y}.png"
             try:
                 tile = Image.open(path)
-                mosaic.paste(tile, ((x - min_x) * tile_size, (y - min_y) * tile_size))
             except FileNotFoundError:
                 print(f"Fichier manquant : {path}")
+                continue
+            mosaic.paste(tile, ((x - min_x) * tile_size,
+                                (y - min_y) * tile_size))
 
-        # Calcul des coords du centre de la tuile courante dans la mosaïque
-        cx = (self.x - min_x) * tile_size + tile_size // 2
-        cy = (self.y - min_y) * tile_size + tile_size // 2
-        self._draw_marker(mosaic, cx, cy)
-
-        # Sauvegarde et mise à jour
         mosaic.save(output_file)
-        self.captured_image = mosaic
         print(f"Mosaïque sauvegardée sous : {output_file}")
+        return mosaic
 
     def afficher_image(self):
         """
