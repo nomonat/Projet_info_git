@@ -178,6 +178,7 @@ class Ui_MainWindow(object):
         self.explo_main = QtWidgets.QMainWindow()
         self.explo_ui = ExploWindow(mission_name, lat, lon, zoom)
 
+
         self.explo_ui.setupUi(self.explo_main)
         self.explo_main.show()
 
