@@ -2,7 +2,8 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QRegion, QPainterPath
 from PyQt5.QtCore import QRect
-
+import subprocess
+import os
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -131,7 +132,9 @@ class Ui_MainWindow(object):
         if valid:
             self.gifFrame.setVisible(True)
             self.movie.start()
-
+            mission_name = self.missionName.text().strip() or "Mission"
+            print(mission_name)
+            sys.close()
 
 if __name__ == "__main__":
     import sys
