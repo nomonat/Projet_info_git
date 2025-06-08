@@ -82,6 +82,35 @@ class ExploWindow(object):
         # ==== vue image + coord label ====
         self.view = QtWidgets.QGraphicsView(cw)
         self.view.setGeometry(30, 200, 931, 481)
+        # === légende à droite ===
+        self.legend_widget = QtWidgets.QWidget(cw)
+        self.legend_widget.setGeometry(QtCore.QRect(975, 200, 150, 250))  # à droite de la carte
+        legend_layout = QtWidgets.QVBoxLayout(self.legend_widget)
+        legend_layout.setContentsMargins(5, 5, 5, 5)
+        legend_layout.setSpacing(5)
+
+        self.legend_labels = []
+        legend_items = {
+            "Rural": (34, 139, 34),
+            "Urbain": (105, 105, 105),
+            "Aquatique": (0, 0, 255),
+            "Routes": (255, 215, 0),
+            "Trait de côte": (255, 0, 0),
+            "Eaux intérieurs": (0, 255, 255),
+            "Mer": (0, 0, 125),
+        }
+
+        for name, color in legend_items.items():
+            hbox = QtWidgets.QHBoxLayout()
+            color_label = QtWidgets.QLabel()
+            color_label.setFixedSize(20, 20)
+            color_label.setStyleSheet(f"background-color: rgb{color}; border: 1px solid black;")
+            text_label = QtWidgets.QLabel(name)
+            hbox.addWidget(color_label)
+            hbox.addWidget(text_label)
+            legend_layout.addLayout(hbox)
+            self.legend_labels.append((color_label, text_label))
+
         self.coord_label = QtWidgets.QLabel(cw)
         self.coord_label.setGeometry(QtCore.QRect(750, 700, 250, 30))
         font = QtGui.QFont(); font.setPointSize(10)
