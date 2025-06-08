@@ -31,6 +31,17 @@ class Drone:
         y = int((1.0 - math.log(math.tan(lat_rad) + 1/math.cos(lat_rad)) / math.pi) / 2.0 * n)
         return x, y
 
+    def tile_to_latlon(self, x, y, zoom):
+        """
+        Convertit les indices de tuile (x, y) en coordonnées géographiques (lat, lon)
+        pour le niveau de zoom donné.
+        """
+        n = 2 ** zoom
+        lon = x / n * 360.0 - 180.0
+        lat_rad = math.atan(math.sinh(math.pi * (1 - 2 * y / n)))
+        lat = math.degrees(lat_rad)
+        return lat, lon
+
     def download_tile(self, x, y, zoom):
         """
         Télécharge la tuile cartographique (256×256) à l’indice (x,y,zoom).
@@ -106,7 +117,7 @@ class Drone:
         else:
             print(f"Direction inconnue : {direction}")
             return
-
+        self.lat, self.lon = self.tile_to_latlon(self.x, self.y, self.zoom)
         print(f"Nouvelles coordonnées de tuile : x={self.x}, y={self.y}, zoom={self.zoom}")
 
         tile = self.download_tile(self.x, self.y, self.zoom)
