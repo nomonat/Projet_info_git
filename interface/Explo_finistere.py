@@ -2,11 +2,7 @@
 import os
 import shutil
 import numpy as np
-from io import BytesIO
 from PIL import Image
-import math
-import requests
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
@@ -14,21 +10,17 @@ from Drone import Drone
 from Traitement_image import Kmean, Moyenne_couleur, Traitement_image
 
 class CheckableMenu(QtWidgets.QMenu):
-    def __init__(self,  parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-
         widget = QtWidgets.QWidget(self)
         layout = QtWidgets.QVBoxLayout(widget)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(5)
-
-        # On ajoute "Trait de côte" en tête de liste
         self.checkboxes = []
         for name in ["Trait de côte", "Rural", "Urbain", "Aquatique", "Routes"]:
             cb = QtWidgets.QCheckBox(name)
             layout.addWidget(cb)
             self.checkboxes.append(cb)
-
         widget.setLayout(layout)
         action = QtWidgets.QWidgetAction(self)
         action.setDefaultWidget(widget)
@@ -36,7 +28,7 @@ class CheckableMenu(QtWidgets.QMenu):
 
 
 class ExploWindow(object):
-    def __init__(self, mission_name,lat_ini,lon_ini):
+    def __init__(self, mission_name, lat_ini, lon_ini):
         self.mission_name = mission_name
         self.lat = lat_ini
         self.lon = lon_ini
@@ -45,105 +37,82 @@ class ExploWindow(object):
         MainWindow.setObjectName("MainWindow")
         MainWindow.setWindowTitle(f"Mission : {self.mission_name}")
         MainWindow.resize(1059, 843)
-        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        cw = QtWidgets.QWidget(MainWindow)
 
-        # Barre du haut
-        hlw = QtWidgets.QWidget(self.centralwidget)
-        hlw.setGeometry(QtCore.QRect(0, 0, 1045, 194))
+        # === barre du haut ===
+        hlw = QtWidgets.QWidget(cw)
+        hlw.setGeometry(0, 0, 1045, 194)
         hlay = QtWidgets.QHBoxLayout(hlw)
         hlay.setContentsMargins(10, 10, 10, 10)
         hlay.setSpacing(20)
 
-        # Bouton "Lancer"
-        self.pushButton_5 = QtWidgets.QPushButton("Lancer", hlw)
-        hlay.addWidget(self.pushButton_5)
+        # lancement, méthode, appliquer, zoom, terrain, save, quit
+        self.btnLaunch  = QtWidgets.QPushButton("Lancer", hlw)
+        self.comboMethod= QtWidgets.QComboBox(hlw)
+        self.comboMethod.addItems(["Satellite", "K-means", "Variance"])
+        self.btnApply   = QtWidgets.QPushButton("Appliquer les filtres", hlw)
+        self.comboZoom  = QtWidgets.QComboBox(hlw)
+        self.comboZoom.addItems([f"Zoom : {z}" for z in (11, 12, 13)])
+        self.btnTerrain = QtWidgets.QToolButton(hlw)
+        self.btnTerrain.setText("Terrain")
+        self.btnTerrain.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        self.terrainMenu= CheckableMenu(MainWindow)
+        self.btnTerrain.setMenu(self.terrainMenu)
+        self.btnSave    = QtWidgets.QPushButton("Enregistrer la vue", hlw)
+        self.btnQuit    = QtWidgets.QPushButton("Fin de la mission", hlw)
 
-        # --- Choix méthode de vue (Satellite par défaut) ---
-        self.label_methode = QtWidgets.QLabel("Méthode de vue :", hlw)
-        hlay.addWidget(self.label_methode)
-        self.comboBox_2 = QtWidgets.QComboBox(hlw)
-        self.comboBox_2.addItems(["Satellite", "K-means", "Variance"])
-        hlay.addWidget(self.comboBox_2)
+        for w in (self.btnLaunch,
+                  QtWidgets.QLabel("Méthode de vue :", hlw),
+                  self.comboMethod,
+                  self.btnApply,
+                  self.comboZoom,
+                  self.btnTerrain):
+            hlay.addWidget(w)
+        hlay.addSpacerItem(QtWidgets.QSpacerItem(40,20,QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum))
+        hlay.addWidget(self.btnSave)
+        hlay.addWidget(self.btnQuit)
 
-        # **On place tout de suite le bouton OK ici :**
-        self.okButton = QtWidgets.QPushButton("Appliquer les filtres", hlw)
-        hlay.addWidget(self.okButton)
-
-        # --- Puis on ajoute le comboBox de zoom ---
-        self.comboBox = QtWidgets.QComboBox(hlw)
-        self.comboBox.addItems([f"Zoom : {z}" for z in (11, 12, 13)])
-        hlay.addWidget(self.comboBox)
-
-        # Bouton Terrain (cases à cocher)
-        self.terrainButton = QtWidgets.QToolButton(hlw)
-        self.terrainButton.setText("Terrain")
-        self.terrainButton.setPopupMode(QtWidgets.QToolButton.InstantPopup)
-        self.terrainMenu = CheckableMenu(MainWindow)
-        self.terrainButton.setMenu(self.terrainMenu)
-        hlay.addWidget(self.terrainButton)
-
-        # Espaceur
-        hlay.addSpacerItem(
-            QtWidgets.QSpacerItem(40, 20,
-                                  QtWidgets.QSizePolicy.Expanding,
-                                  QtWidgets.QSizePolicy.Minimum)
-        )
-
-        # Boutons "Enregistrer la vue" et "Fin de la mission"
-        self.pushButton_6 = QtWidgets.QPushButton("Enregistrer la vue", hlw)
-        hlay.addWidget(self.pushButton_6)
-        self.pushButton_7 = QtWidgets.QPushButton("Fin de la mission", hlw)
-        hlay.addWidget(self.pushButton_7)
-
-        # Zone directionnelle
-        glw = QtWidgets.QWidget(self.centralwidget)
-        glw.setGeometry(QtCore.QRect(240, 700, 295, 80))
+        # ==== zone directionnelle ====
+        glw = QtWidgets.QWidget(cw)
+        glw.setGeometry(240, 700, 295, 80)
         gl = QtWidgets.QGridLayout(glw)
-        self.pushButton_2 = QtWidgets.QPushButton("Haut", glw)
-        gl.addWidget(self.pushButton_2, 0, 1)
-        self.pushButton   = QtWidgets.QPushButton("Gauche", glw)
-        gl.addWidget(self.pushButton, 1, 0)
-        self.pushButton_3 = QtWidgets.QPushButton("Bas", glw)
-        gl.addWidget(self.pushButton_3, 1, 1)
-        self.pushButton_4 = QtWidgets.QPushButton("Droite", glw)
-        gl.addWidget(self.pushButton_4, 1, 2)
+        self.btnUp    = QtWidgets.QPushButton("Haut", glw);  gl.addWidget(self.btnUp,0,1)
+        self.btnLeft  = QtWidgets.QPushButton("Gauche",glw); gl.addWidget(self.btnLeft,1,0)
+        self.btnDown  = QtWidgets.QPushButton("Bas",glw);    gl.addWidget(self.btnDown,1,1)
+        self.btnRight = QtWidgets.QPushButton("Droite",glw); gl.addWidget(self.btnRight,1,2)
 
-        # Vue image
-        self.graphicsView = QtWidgets.QGraphicsView(self.centralwidget)
-        self.graphicsView.setGeometry(QtCore.QRect(30, 200, 931, 481))
-        # Label des coordonnées (en bas à droite)
-        self.coord_label = QtWidgets.QLabel(self.centralwidget)
+        # ==== vue image + coord label ====
+        self.view = QtWidgets.QGraphicsView(cw)
+        self.view.setGeometry(30, 200, 931, 481)
+        self.coord_label = QtWidgets.QLabel(cw)
         self.coord_label.setGeometry(QtCore.QRect(750, 700, 250, 30))
-        font = QtGui.QFont()
-        font.setPointSize(10)
+        font = QtGui.QFont(); font.setPointSize(10)
         self.coord_label.setFont(font)
         self.coord_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         self.coord_label.setText(f"Lat: {self.lat:.4f} | Lon: {self.lon:.4f}")
 
-        MainWindow.setCentralWidget(self.centralwidget)
+        MainWindow.setCentralWidget(cw)
         MainWindow.setStatusBar(QtWidgets.QStatusBar(MainWindow))
 
-        # Connexions
-        self.drone = Drone()
-        self.pushButton_5.clicked.connect(self._capture)
-        self.pushButton.clicked.connect(lambda: self._move("gauche"))
-        self.pushButton_2.clicked.connect(lambda: self._move("haut"))
-        self.pushButton_3.clicked.connect(lambda: self._move("bas"))
-        self.pushButton_4.clicked.connect(lambda: self._move("droite"))
-        self.okButton.clicked.connect(self._process_and_display)
-        self.pushButton_6.clicked.connect(self._save)
-        # Remplace la connexion directe par notre méthode de nettoyage
-        self.pushButton_7.clicked.connect(self._finish)
+        # connexions
+        self.drone       = Drone()
+        self.btnLaunch.clicked.connect(self._capture)
+        self.btnLeft.clicked.connect(lambda: self._move("gauche"))
+        self.btnUp.clicked.connect(lambda: self._move("haut"))
+        self.btnDown.clicked.connect(lambda: self._move("bas"))
+        self.btnRight.clicked.connect(lambda: self._move("droite"))
+        self.btnApply.clicked.connect(self._process_and_display)
+        self.btnSave.clicked.connect(self._save)
+        self.btnQuit.clicked.connect(self._finish)
 
     def _display(self, pil_img):
-        data = pil_img.tobytes('raw', 'RGB')
-        qimg = QtGui.QImage(data, pil_img.width, pil_img.height,
-                            QtGui.QImage.Format_RGB888)
-        pix = QtGui.QPixmap.fromImage(qimg)
-        scene = QtWidgets.QGraphicsScene()
+        data = pil_img.tobytes('raw','RGB')
+        qimg = QtGui.QImage(data, pil_img.width, pil_img.height, QtGui.QImage.Format_RGB888)
+        pix  = QtGui.QPixmap.fromImage(qimg)
+        scene= QtWidgets.QGraphicsScene()
         scene.addPixmap(pix)
-        self.graphicsView.setScene(scene)
-        self.graphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
+        self.view.setScene(scene)
+        self.view.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
 
     def _show_base(self):
         base = self.drone.recoller()
@@ -156,73 +125,71 @@ class ExploWindow(object):
         if base is None:
             return
 
-        # 2) Choix de la méthode de segmentation
-        method = self.comboBox_2.currentText()
+        # 2) Choix de la méthode
         tmp = "_tmp_mosaic.png"
         base.save(tmp)
-
+        method = self.comboMethod.currentText()
+        print("=== Méthode sélectionnée :", method)
         if method == "Satellite":
-            seg_img = base.copy()
-            seg_helper = Traitement_image(tmp)  # juste pour les masques
+            seg_img, helper = base.copy(), Traitement_image(tmp)
         elif method == "K-means":
-            seg = Kmean(tmp)
-            seg_img = seg.segmented_img
-            seg_helper = seg
-        else:  # "Variance"
-            seg = Moyenne_couleur(tmp)
-            seg_img = Image.open("Moyenne_couleur.png")
-            seg_helper = seg
+            seg = Kmean(tmp);
+            seg_img, helper = seg.segmented_img, seg
+        else:  # Variance
+            seg_v = Moyenne_couleur(tmp);
+            seg_img, helper = seg_v.img, seg_v
 
-        # 3) Préparer les masques de segmentation
-        seg_helper.img       = seg_img
-        seg_helper.img_array = np.array(seg_img)
-        seg_helper.hauteur, seg_helper.largeur = seg_helper.img_array.shape[:2]
-        seg_helper.creer_masques_couleurs()
+        # 3) Initialisation des masques
+        helper.img = seg_img
+        helper.img_array = np.array(seg_img)
+        helper.hauteur, helper.largeur = helper.img_array.shape[:2]
+        helper.creer_masques_couleurs()
 
-        # 4) Récupérer les cases cochées
-        #  l’index 0 = Trait de côte, 1 = Rural, 2 = Urbain, 3 = Aquatique, 4 = Routes
+        # 4) Préparer le trait de côte (mais on l'appliquera tout dernier)
+        helper.tracer_trait_de_cote()
+
+        # 5) Récupérer les cases cochées
         checks = self.terrainMenu.checkboxes
-        base_arr = np.array(base)
-        seg_arr  = np.array(seg_img)
+        names = ["trait_de_cote", "rural", "urbain", "marin", "routes"]
+        colors = {
+            "trait_de_cote": (255, 0, 0),
+            "rural": (34, 139, 34),
+            "urbain": (105, 105, 105),
+            "marin": (0, 0, 255),
+            "routes": (255, 215, 0),
+        }
 
-        # 5) Construire un masque global
-        mask_all = np.zeros((base_arr.shape[0], base_arr.shape[1]), dtype=bool)
+        # 6) Appliquer d'abord les filtres terrain, puis le trait de côte
+        if any(cb.isChecked() for cb in checks):
+            img_courante = base.copy()
 
-        # 5a) Trait de côte si cochée
-        if checks[0].isChecked():
-            seg_helper.tracer_trait_de_cote()
-            mask_all |= seg_helper.trait_de_cote
+            # 6a) terrain filters (skip trait_de_cote for l'instant)
+            for cb, attr in zip(checks[1:], names[1:]):
+                if not cb.isChecked():
+                    continue
+                # on met à jour helper sur l'image actuelle
+                helper.img_array = np.array(img_courante)
+                helper.hauteur, helper.largeur = helper.img_array.shape[:2]
+                img_courante = helper.appliquer_masque(getattr(helper, attr), colors[attr])
 
-        # 5b) Autres filtres terrain
-        names = ["rural", "urbain", "marin", "routes"]
-        for cb, attr in zip(checks[1:], names):
-            if cb.isChecked():
-                mask_all |= getattr(seg_helper, attr)
+            # 6b) trait de côte en dernier
+            if checks[0].isChecked():
+                helper.img_array = np.array(img_courante)
+                helper.hauteur, helper.largeur = helper.img_array.shape[:2]
+                img_courante = helper.appliquer_masque(helper.trait_de_cote, colors["trait_de_cote"])
 
-        # 6) Si au moins un filtre est actif, on applique le masque
-        if mask_all.any():
-            # on remplace dans la mosaïque brute
-            base_arr[mask_all] = seg_arr[mask_all]
-            to_show = Image.fromarray(base_arr)
+            to_show = img_courante
         else:
-            # sinon on affiche la mosaïque brute
             to_show = base
 
         # 7) Affichage final
         self._display(to_show)
 
-
-
     def _capture(self):
-        # lat_min, lon_min, lat_max, lon_max = 47.7, -5.1, 48.8, -3.2
-        # lat = (lat_min + lat_max) / 2
-        # lon = (lon_min + lon_max) / 2
-
-        zoom = int(self.comboBox.currentText().split(":")[1])
+        zoom = int(self.comboZoom.currentText().split(":")[1])
         self.drone.capture_image(self.lat, self.lon, zoom)
         self.lat, self.lon = self.drone.get_coordinates()
         self.coord_label.setText(f"Lat: {self.lat:.4f} | Lon: {self.lon:.4f}")
-
         self._show_base()
 
     def _move(self, direction):
@@ -237,26 +204,24 @@ class ExploWindow(object):
             return
         path, _ = QFileDialog.getSaveFileName(None, "Enregistrer la vue", "", "PNG (*.png)")
         if path:
-            pixmap = self.graphicsView.grab()
-            pixmap.save(path, "PNG")
+            self.view.grab().save(path, "PNG")
             QMessageBox.information(None, "Enregistré", f"Image sauvegardée dans :\n{path}")
 
     def _finish(self):
-        """Nettoie tous les fichiers temporaires puis quitte."""
-        # Supprime le dossier tiles et mosaïque / fichiers tmp
+        # nettoyage
         if os.path.isdir("tiles"):
             shutil.rmtree("tiles")
-        for f in ("mosaic.png", "_tmp_mosaic.png", "Moyenne_couleur.png", "Kmean.png"):
-            if os.path.isfile(f):
-                os.remove(f)
-        # Quitte l’appli
+        for f in ("mosaic.png","_tmp_mosaic.png","Kmean.png","Moyenne_couleur.png"):
+            try:    os.remove(f)
+            except: pass
         QtWidgets.qApp.quit()
+
 
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    MainWindow = QtWidgets.QMainWindow()
-    ui = ExploWindow('test',48,-4)
-    ui.setupUi(MainWindow)
-    MainWindow.show()
+    w   = QtWidgets.QMainWindow()
+    ui  = ExploWindow("Test", 48.0, -4.0)
+    ui.setupUi(w)
+    w.show()
     sys.exit(app.exec_())

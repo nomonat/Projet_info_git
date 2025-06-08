@@ -108,8 +108,5 @@ class Moyenne_couleur(Traitement_image):
 
 
 if __name__ == "__main__":
-    # test rapide
-    ti = Traitement_image("riviere.png")
-    ti.tracer_trait_de_cote()
-    out = ti.appliquer_masque(ti.trait_de_cote)
-    out.show()
+    mc = Moyenne_couleur("riviere.png")
+    mc.img.show()
