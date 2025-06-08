@@ -2,7 +2,6 @@ A réaliser :
     _Revoir les méthodes d'enregistrement
     _Permettre à l'utilisateur d'isoler sur la carte les points d'intérêts présents : lac par exemple car facile à isoler
     _Zoom défini dès le début
-    _Méthode variance bien intégrée
     _Test
     _Coordonnées actualisées
     _Revoir les commentaires
