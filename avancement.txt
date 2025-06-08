@@ -1,5 +1,7 @@
 A réaliser :
-    _Modifier les fonctions kmeans et récursive pour qu'en sortie on ait trois mask pour chaque zone : urbain, rural et aquatique.
-    _Revoir la fonction récursive de sorte que la taille des tuiles sur lesquelles ont fait la moyenne de couleur soit variable
-    _Réaliser une seconde interface avec la définition de la mission
+    _Revoir les méthodes d'enregistrement
     _Permettre à l'utilisateur d'isoler sur la carte les points d'intérêts présents : lac par exemple car facile à isoler
+    _Zoom défini dès le début
+    _Méthode variance bien intégrée
+    _Test
+    _Coordonnées actualisées
