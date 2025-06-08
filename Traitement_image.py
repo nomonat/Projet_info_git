@@ -15,15 +15,41 @@ class Traitement_image:
         self.marin = None
         self.routes = None
         self.trait_de_cote = None
+        self.eaux_interieur=None
 
     def tracer_trait_de_cote(self, seuil: float = 0.5):
-        """Calcule et stocke dans self.trait_de_cote le bord des pixels bleus."""
-        masque_bleu = (self.img_array[:, :, 0] == 0) & \
-                      (self.img_array[:, :, 1] == 0) & \
-                      (self.img_array[:, :, 2] == 255)
-        grad_x = ndimage.sobel(masque_bleu.astype(float), axis=1)
-        grad_y = ndimage.sobel(masque_bleu.astype(float), axis=0)
-        grad = np.hypot(grad_x, grad_y)
+        """
+        Calcule et stocke dans self.trait_de_cote le trait de côte,
+        en ne considérant que la “mer” (pixels bleus connectés au bord).
+        """
+        # 1) masque initial des pixels bleus (eau)
+        masque_bleu = (
+            (self.img_array[:, :, 0] == 0) &
+            (self.img_array[:, :, 1] == 0) &
+            (self.img_array[:, :, 2] == 255)
+        )
+
+        # 2) labellisation des composantes connexes
+        labels, nb = ndimage.label(masque_bleu)
+
+        # 3) ne garder que celles qui touchent le bord → “mer”
+        sea_mask = np.zeros_like(masque_bleu)
+        h, w = masque_bleu.shape
+        for comp in range(1, nb + 1):
+            comp_mask = (labels == comp)
+            # si un pixel de la composante est sur un bord de l’image
+            if (
+                comp_mask[0, :].any() or comp_mask[-1, :].any()
+                or comp_mask[:, 0].any() or comp_mask[:, -1].any()
+            ):
+                sea_mask |= comp_mask
+
+        # 4) gradient de Sobel sur ce masque “mer”
+        grad_x = ndimage.sobel(sea_mask.astype(float), axis=1)
+        grad_y = ndimage.sobel(sea_mask.astype(float), axis=0)
+        grad   = np.hypot(grad_x, grad_y)
+
+        # 5) seuil pour obtenir un trait fin
         self.trait_de_cote = grad > seuil
 
     def creer_masques_couleurs(self):
@@ -44,9 +70,26 @@ class Traitement_image:
         img_mod[masque] = couleur
         return Image.fromarray(img_mod)
 
-    def points_interet(self, interet):
-        # à implémenter plus tard
-        return
+    def trouver_eaux_interieur(self, seuil: float = 0.5) -> np.ndarray:
+        """
+        Construit et renvoie un masque booléen des eaux intérieures,
+        c’est-à-dire tous les pixels marins (0,0,255) qui ne font pas
+        partie du trait de côte.
+        """
+        # 1) Assurer que self.marin et self.trait_de_cote sont prêts
+        if self.marin is None:
+            self.creer_masques_couleurs()
+        if self.trait_de_cote is None:
+            self.tracer_trait_de_cote(seuil=seuil)
+
+        # 2) Eau intérieure = marin et pas trait de côte
+        mask_interieur = self.marin & (~self.trait_de_cote)
+
+        # 3) Stockage
+        self.eaux_interieur = mask_interieur
+
+        # 4) Retour
+        return mask_interieur
 
 
 class Kmean(Traitement_image):
