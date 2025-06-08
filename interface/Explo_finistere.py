@@ -17,7 +17,7 @@ class CheckableMenu(QtWidgets.QMenu):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(5)
         self.checkboxes = []
-        for name in ["Trait de côte", "Rural", "Urbain", "Aquatique", "Routes"]:
+        for name in ["Rural", "Urbain", "Aquatique", "Routes","Trait de côte","Eaux intérieurs"]:
             cb = QtWidgets.QCheckBox(name)
             layout.addWidget(cb)
             self.checkboxes.append(cb)
@@ -124,64 +124,59 @@ class ExploWindow(object):
         if base is None:
             return
 
-        # 2) Choix de la méthode
+        # 2) Segmentation / préparation du helper
         tmp = "_tmp_mosaic.png"
         base.save(tmp)
         method = self.comboMethod.currentText()
         if method == "Satellite":
             seg_img, helper = base.copy(), Traitement_image(tmp)
         elif method == "K-means":
-            seg = Kmean(tmp);
-            seg_img, helper = seg.segmented_img, seg
-        else:  # Variance
-            seg_v = Moyenne_couleur(tmp);
-            seg_img, helper = seg_v.img, seg_v
+            seg_obj = Kmean(tmp)
+            seg_img, helper = seg_obj.segmented_img, seg_obj
+        else:  # "Variance"
+            seg_obj = Moyenne_couleur(tmp)
+            seg_img, helper = seg_obj.img, seg_obj
 
-        # 3) Initialisation des masques
-        helper.img = seg_img
+        # 3) Recharger les masques dans helper
+        helper.img       = seg_img
         helper.img_array = np.array(seg_img)
         helper.hauteur, helper.largeur = helper.img_array.shape[:2]
         helper.creer_masques_couleurs()
-
-        # 4) Préparer le trait de côte (mais on l'appliquera tout dernier)
         helper.tracer_trait_de_cote()
+        # on construit aussi le masque des eaux intérieures
+        helper.trouver_eaux_interieur()  # doit remplir helper.eaux_interieur
 
-        # 5) Récupérer les cases cochées
-        checks = self.terrainMenu.checkboxes
-        names = ["trait_de_cote", "rural", "urbain", "marin", "routes"]
-        colors = {
-            "trait_de_cote": (255, 0, 0),
-            "rural": (34, 139, 34),
-            "urbain": (105, 105, 105),
-            "marin": (0, 0, 255),
-            "routes": (255, 215, 0),
+        # 4) Préparer le mapping case→(attribut, couleur)
+        filter_map = {
+            "Rural":            ("rural",          (34, 139,  34)),
+            "Urbain":           ("urbain",         (105,105, 105)),
+            "Aquatique":        ("marin",          (  0,   0, 255)),
+            "Routes":           ("routes",         (255,215,   0)),
+            "Trait de côte":    ("trait_de_cote",  (255,  0,   0)),
+            "Eaux intérieurs":  ("eaux_interieur", (  0, 255, 255)),
         }
 
-        # 6) Appliquer d'abord les filtres terrain, puis le trait de côte
-        if any(cb.isChecked() for cb in checks):
-            img_courante = base.copy()
+        # 5) Si aucune case n'est cochée → on affiche la base
+        checks = self.terrainMenu.checkboxes
+        if not any(cb.isChecked() for cb in checks):
+            return self._display(base)
 
-            # 6a) terrain filters (skip trait_de_cote for l'instant)
-            for cb, attr in zip(checks[1:], names[1:]):
-                if not cb.isChecked():
-                    continue
-                # on met à jour helper sur l'image actuelle
-                helper.img_array = np.array(img_courante)
-                helper.hauteur, helper.largeur = helper.img_array.shape[:2]
-                img_courante = helper.appliquer_masque(getattr(helper, attr), colors[attr])
-
-            # 6b) trait de côte en dernier
-            if checks[0].isChecked():
-                helper.img_array = np.array(img_courante)
-                helper.hauteur, helper.largeur = helper.img_array.shape[:2]
-                img_courante = helper.appliquer_masque(helper.trait_de_cote, colors["trait_de_cote"])
-
-            to_show = img_courante
-        else:
-            to_show = base
+        # 6) Sinon on part de la mosaïque brute et on applique les filtres dans l’ordre visuel
+        img = base.copy()
+        for cb in checks:
+            if not cb.isChecked():
+                continue
+            name = cb.text()                    # ex. "Aquatique"
+            attr, color = filter_map[name]      # ex. ("marin", (0,0,255))
+            mask = getattr(helper, attr)        # helper.marin, helper.trait_de_cote, etc.
+            # mettre à jour le helper avec l'image courante
+            helper.img_array = np.array(img)
+            helper.hauteur, helper.largeur = helper.img_array.shape[:2]
+            # appliquer le masque
+            img = helper.appliquer_masque(mask, color)
 
         # 7) Affichage final
-        self._display(to_show)
+        self._display(img)
 
     def _capture(self):
 
@@ -219,7 +214,7 @@ if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     w   = QtWidgets.QMainWindow()
-    ui  = ExploWindow("Test", 48.0, -4.0)
+    ui  = ExploWindow("Test", 48.0, -4.0,11)
     ui.setupUi(w)
     w.show()
     sys.exit(app.exec_())
