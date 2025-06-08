@@ -28,10 +28,11 @@ class CheckableMenu(QtWidgets.QMenu):
 
 
 class ExploWindow(object):
-    def __init__(self, mission_name, lat_ini, lon_ini):
+    def __init__(self, mission_name, lat_ini, lon_ini, zoom):
         self.mission_name = mission_name
         self.lat = lat_ini
         self.lon = lon_ini
+        self.zoom = zoom
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -51,8 +52,7 @@ class ExploWindow(object):
         self.comboMethod= QtWidgets.QComboBox(hlw)
         self.comboMethod.addItems(["Satellite", "K-means", "Variance"])
         self.btnApply   = QtWidgets.QPushButton("Appliquer les filtres", hlw)
-        self.comboZoom  = QtWidgets.QComboBox(hlw)
-        self.comboZoom.addItems([f"Zoom : {z}" for z in (11, 12, 13)])
+
         self.btnTerrain = QtWidgets.QToolButton(hlw)
         self.btnTerrain.setText("Terrain")
         self.btnTerrain.setPopupMode(QtWidgets.QToolButton.InstantPopup)
@@ -65,7 +65,6 @@ class ExploWindow(object):
                   QtWidgets.QLabel("Méthode de vue :", hlw),
                   self.comboMethod,
                   self.btnApply,
-                  self.comboZoom,
                   self.btnTerrain):
             hlay.addWidget(w)
         hlay.addSpacerItem(QtWidgets.QSpacerItem(40,20,QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum))
@@ -185,8 +184,8 @@ class ExploWindow(object):
         self._display(to_show)
 
     def _capture(self):
-        zoom = int(self.comboZoom.currentText().split(":")[1])
-        self.drone.capture_image(self.lat, self.lon, zoom)
+
+        self.drone.capture_image(self.lat, self.lon, self.zoom)
         self.lat, self.lon = self.drone.get_coordinates()
         self.coord_label.setText(f"Lat: {self.lat:.4f} | Lon: {self.lon:.4f}")
         self._show_base()

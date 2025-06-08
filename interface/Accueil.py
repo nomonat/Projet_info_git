@@ -54,6 +54,25 @@ class Ui_MainWindow(object):
         self.missionName = QtWidgets.QLineEdit(self.centralwidget)
         self.missionName.setGeometry(QtCore.QRect(40, 480, 300, 40))
         self.missionName.setPlaceholderText("Nom de la mission")
+        # Zoom déplacé ici :
+        self.zoomLabel = QtWidgets.QLabel("Zoom :", self.centralwidget)
+        self.zoomLabel.setGeometry(QtCore.QRect(360, 480, 60, 40))
+
+        self.zoom_input = QtWidgets.QComboBox(self.centralwidget)
+        self.zoom_input.setGeometry(QtCore.QRect(420, 480, 100, 40))
+        self.zoom_input.setStyleSheet("""
+            QComboBox {
+                padding: 6px;
+                border: 2px solid #ccc;
+                border-radius: 8px;
+                background-color: white;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+        """)
+        self.zoom_input.addItems(["11", "12", "13"])
+        self.zoom_input.setCurrentIndex(1)
 
         # Message info
         self.infoText = QtWidgets.QLabel(self.centralwidget)
@@ -61,11 +80,13 @@ class Ui_MainWindow(object):
         self.infoText.setText("Entrez une latitude entre 47.7 et 48.8\net une longitude entre -5.1 et -3.2")
         self.infoText.setStyleSheet("font-size: 11pt; color: #333;")
 
+
         # Entrées coordonnées
         self.coordWidget = QtWidgets.QWidget(self.centralwidget)
-        self.coordWidget.setGeometry(QtCore.QRect(40, 590, 600, 60))
+        self.coordWidget.setGeometry(QtCore.QRect(40, 590, 700, 60))
         self.coordLayout = QtWidgets.QHBoxLayout(self.coordWidget)
         self.coordLayout.setContentsMargins(0, 0, 0, 0)
+        self.coordLayout.setSpacing(40)
 
         self.lat_input = QtWidgets.QLineEdit()
         self.lat_input.setFixedHeight(40)
@@ -77,9 +98,10 @@ class Ui_MainWindow(object):
 
         self.coordLayout.addWidget(QtWidgets.QLabel("Latitude :"))
         self.coordLayout.addWidget(self.lat_input)
-        self.coordLayout.addSpacing(20)
         self.coordLayout.addWidget(QtWidgets.QLabel("Longitude :"))
         self.coordLayout.addWidget(self.lon_input)
+
+
 
         # Bouton lancement
         self.launchButton = QtWidgets.QPushButton(self.centralwidget)
@@ -116,6 +138,7 @@ class Ui_MainWindow(object):
     def startAnimation(self):
         lat_text = self.lat_input.text()
         lon_text = self.lon_input.text()
+        zoom_text = self.zoom_input.currentText()
         valid = True
 
         self.lat_input.setStyleSheet("")
@@ -137,14 +160,19 @@ class Ui_MainWindow(object):
             self.lon_input.setStyleSheet("border: 2px solid red;")
             valid = False
 
+        try:
+            zoom = int(zoom_text)
+            if zoom not in [11, 12, 13]:
+                raise ValueError
+        except ValueError:
+            valid = False
+
         if valid:
             self.gifFrame.setVisible(True)
             self.movie.start()
+            QTimer.singleShot(1000, lambda: self.emit_launch(lat, lon, zoom))
 
-            # Lancer l'autre interface après 1 seconde
-            QTimer.singleShot(1000, lambda: self.emit_launch(lat, lon))
-
-    def emit_launch(self, lat, lon):
+    def emit_launch(self, lat, lon,zoom):
         mission_name = self.missionName.text().strip() or "Mission"
 
         # Ferme la fenêtre principale proprement
@@ -153,7 +181,8 @@ class Ui_MainWindow(object):
         # Lance l'autre interface directement
         from interface.Explo_finistere import ExploWindow as ExploWindow
         self.explo_main = QtWidgets.QMainWindow()
-        self.explo_ui = ExploWindow(mission_name, lat, lon)
+        self.explo_ui = ExploWindow(mission_name, lat, lon, zoom)
+
         self.explo_ui.setupUi(self.explo_main)
         self.explo_main.show()
 
