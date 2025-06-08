@@ -10,13 +10,12 @@ class Drone:
         """
         self.zoom = None
         self.lat_min = None
+        self.long_min = None
         self.lat_max = None
-        self.lon_min = None
-        self.lon_max = None
-        self.num_tiles = 0
+        self.long_max = None
         self.captured_image = None
 
-    def latlon_to_tile(self, lat, lon, zoom):
+    def latlon_to_tile(self,lat,lon,zoom):
         lat_rad = math.radians(lat)
         n = 2 ** zoom
         x = int((lon + 180.0) / 360.0 * n)
