@@ -128,21 +128,30 @@ class Ui_MainWindow(object):
                    if cb.isChecked()]
 
         if checked:
-            # 5) appliquer successivement chaque masque
-            img_courante = base.copy()
+            # On part de la mosaïque brute
+            img_courante = base.copy()  # PIL.Image
+
+            # Couleurs associées à chaque attribut
             couleurs = {
-                "marin":        (0,0,255),
-                "rural":        (34,139,34),
-                "urbain":       (105,105,105),
-                "routes":       (255,215,0),
-                "trait_de_cote":(255,0,0),
+                "marin": (0, 0, 255),
+                "rural": (34, 139, 34),
+                "urbain": (105, 105, 105),
+                "routes": (255, 215, 0),
+                "trait_de_cote": (255, 0, 0),
             }
+
+            # On applique chaque masque l’un après l’autre
             for attr in checked:
-                masque  = getattr(helper, attr)
+                masque = getattr(helper, attr)  # ex. helper.rural ou helper.trait_de_cote
                 couleur = couleurs[attr]
+
+                # on met à jour helper.img_array sur l'image courante
                 helper.img_array = np.array(img_courante)
                 helper.hauteur, helper.largeur = helper.img_array.shape[:2]
+
+                # et on recolore
                 img_courante = helper.appliquer_masque(masque, couleur)
+
             to_show = img_courante
         else:
             to_show = base
