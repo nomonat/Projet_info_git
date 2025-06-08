@@ -35,13 +35,13 @@ class ExploWindow(object):
         self.zoom = zoom
 
     def setupUi(self, MainWindow):
-        """"""
+        """Configuration de la fenêtre"""
         MainWindow.setObjectName("MainWindow")
         MainWindow.setWindowTitle(f"Mission : {self.mission_name}")
         MainWindow.resize(1059, 843)
         cw = QtWidgets.QWidget(MainWindow)
 
-        # === barre du haut ===
+        #Barre du haut
         hlw = QtWidgets.QWidget(cw)
         hlw.setGeometry(0, 0, 1045, 194)
         hlay = QtWidgets.QHBoxLayout(hlw)
@@ -49,29 +49,34 @@ class ExploWindow(object):
         hlay.setSpacing(20)
 
         # lancement, méthode, appliquer, zoom, terrain, save, quit
-        self.btnLaunch  = QtWidgets.QPushButton("Lancer", hlw)
-        self.comboMethod= QtWidgets.QComboBox(hlw)
+        self.btnLaunch = QtWidgets.QPushButton("Lancer", hlw)
+        self.comboMethod = QtWidgets.QComboBox(hlw)
         self.comboMethod.addItems(["Satellite", "K-means", "Variance"])
-        self.btnApply   = QtWidgets.QPushButton("Appliquer les filtres", hlw)
+        self.btnApply = QtWidgets.QPushButton("Appliquer les filtres", hlw)
 
         self.btnTerrain = QtWidgets.QToolButton(hlw)
         self.btnTerrain.setText("Terrain")
         self.btnTerrain.setPopupMode(QtWidgets.QToolButton.InstantPopup)
-        self.terrainMenu= CheckableMenu(MainWindow)
+        self.terrainMenu = CheckableMenu(MainWindow)
         self.btnTerrain.setMenu(self.terrainMenu)
-        self.btnSave    = QtWidgets.QPushButton("Enregistrer la vue", hlw)
-        self.btnQuit    = QtWidgets.QPushButton("Fin de la mission", hlw)
+        self.btnSave = QtWidgets.QPushButton("Enregistrer la vue", hlw)
+        self.btnQuit = QtWidgets.QPushButton("Fin de la mission", hlw)
 
-        for w in (self.btnLaunch,
-                  QtWidgets.QLabel("Méthode de vue :", hlw),
-                  self.comboMethod,
-                  self.btnApply,
-                  self.btnTerrain):
+        # Conteneur horizontal pour comboMethod, btnTerrain et btnApply
+        middle_widget = QtWidgets.QWidget(hlw)
+        middle_layout = QtWidgets.QHBoxLayout(middle_widget)
+        middle_layout.setContentsMargins(0, 0, 0, 0)
+        middle_layout.setSpacing(10)
+        middle_layout.addWidget(self.comboMethod)
+        middle_layout.addWidget(self.btnTerrain)
+        middle_layout.addWidget(self.btnApply)
+
+        for w in (self.btnLaunch,middle_widget):
             hlay.addWidget(w)
-        hlay.addSpacerItem(QtWidgets.QSpacerItem(40,20,QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum))
+        hlay.addSpacerItem(
+            QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum))
         hlay.addWidget(self.btnSave)
         hlay.addWidget(self.btnQuit)
-
         # ==== zone directionnelle ====
         glw = QtWidgets.QWidget(cw)
         glw.setGeometry(240, 700, 295, 80)
