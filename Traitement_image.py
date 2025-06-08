@@ -119,21 +119,35 @@ class Kmean(Traitement_image):
         self.creer_masques_couleurs()
 
     def k_means(self, k: int = 4):
+        # On transforme l'image en une liste de pixels (chaque pixel est un triplet RGB)
         pixels = self.img_array.reshape(-1, 3)
+
+        # On définit manuellement les centres initiaux des clusters (4 couleurs de référence)
         centers = np.array([
-            [195, 229, 235],
-            [218, 238, 199],
-            [255, 255, 249],
-            [255, 255, 150]
+            [195, 229, 235],  # Bleu clair
+            [218, 238, 199],  # Vert clair
+            [255, 255, 249],  # Presque blanc
+            [255, 255, 150]  # Jaune pâle
         ], dtype=np.uint8)
+
+        # On applique l'algorithme K-Means avec ces centres comme point de départ
+        # n_init=1 signifie qu'on ne fait qu'une seule initialisation
+        # random_state=0 pour que les résultats soient reproductibles
         km = KMeans(n_clusters=k, init=centers, n_init=1, random_state=0).fit(pixels)
+
+        # On définit les couleurs à utiliser pour représenter chaque cluster
+        # Ces couleurs correspondent à : bleu (eau), vert (végétation), gris (roche), jaune (sable)
         cols = np.array([
-            [0,   0,   255],
-            [34, 139,  34],
-            [105,105, 105],
-            [255,215,   0]
+            [0, 0, 255],  # Bleu
+            [34, 139, 34],  # Vert forêt
+            [105, 105, 105],  # Gris foncé
+            [255, 215, 0]  # Jaune doré
         ])
+
+        # On crée une nouvelle image en remplaçant chaque pixel par la couleur de son cluster
         img = cols[km.labels_].reshape(self.hauteur, self.largeur, 3)
+
+        # On retourne l'image finale sous forme d'objet PIL (prêt à être affiché ou sauvegardé)
         return Image.fromarray(img.astype(np.uint8))
 
 
