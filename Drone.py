@@ -5,6 +5,7 @@ from io import BytesIO
 from PIL import Image, ImageEnhance, ImageDraw
 
 class Drone:
+    """Noam """
     def __init__(self):
         """
         Initialise les attributs du drone.

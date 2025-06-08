@@ -5,6 +5,7 @@ from sklearn.cluster import KMeans
 
 class Traitement_image:
     """
+    Florian
     Classe mère du traitement
     Permet d'initialiser les différentes zones et d'avoir des méthodes communes aux
     traitements d'images K-means et Moyenne_couleur à écrire qu'une fois
