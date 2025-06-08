@@ -19,6 +19,7 @@ class Drone:
         self.visited_tiles = []
 
     def get_coordinates(self):
+        """Permet d'obtenir les coordonées """
         return(self.lat, self.lon)
 
     def latlon_to_tile(self, lat, lon, zoom):
@@ -60,15 +61,6 @@ class Drone:
         enhancer = ImageEnhance.Contrast(img)
         return enhancer.enhance(facteur)
 
-    def _draw_marker(self, img, cx, cy, radius=10, color=(255, 0, 0)):
-        """
-        Trace un cercle plein de couleur `color` de rayon `radius`
-        centré en (cx, cy) sur l’image PIL `img`.
-        """
-        draw = ImageDraw.Draw(img)
-        bbox = [cx - radius, cy - radius, cx + radius, cy + radius]
-        draw.ellipse(bbox, fill=color)
-
     def capture_image(self, lat, lon, zoom, contraste=1.8):
         """
         Capture la tuile correspondant à (lat, lon, zoom), améliore son contraste,
@@ -82,10 +74,6 @@ class Drone:
 
         # Contraste
         img = self.enhance_contrast(tile, facteur=contraste)
-
-        # Marqueur au centre de la tuile (256×256)
-        cx, cy = img.width // 2, img.height // 2
-        self._draw_marker(img, cx, cy)
 
         # Sauvegarde
         os.makedirs("tiles", exist_ok=True)
@@ -123,11 +111,6 @@ class Drone:
 
         tile = self.download_tile(self.x, self.y, self.zoom)
         img = self.enhance_contrast(tile, facteur=1.8)
-
-        # Marqueur au centre de la tuile
-        cx, cy = img.width // 2, img.height // 2
-        self._draw_marker(img, cx, cy)
-
         os.makedirs("tiles", exist_ok=True)
         path = f"tiles/tuile_{self.zoom}_{self.x}_{self.y}.png"
         tile.save(path)
@@ -167,9 +150,3 @@ class Drone:
         mosaic.save(output_file)
         print(f"Mosaïque sauvegardée sous : {output_file}")
         return mosaic
-
-    def afficher_image(self):
-        """
-        (désactivée) – l'interface doit récupérer self.captured_image.
-        """
-        print("afficher_image() est désactivé, utilisez self.captured_image dans l'UI.")
