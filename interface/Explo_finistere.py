@@ -8,6 +8,7 @@ from Drone import Drone
 from Traitement_image import Kmean, Moyenne_couleur, Traitement_image
 
 class CheckableMenu(QtWidgets.QMenu):
+    """Créé le menu contenant des cases à cocher"""
     def __init__(self, parent=None):
         super().__init__(parent)
         widget = QtWidgets.QWidget(self)
