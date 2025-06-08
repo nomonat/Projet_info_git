@@ -1,7 +1,5 @@
 A réaliser :
-    _Revoir les méthodes d'enregistrement
     _Permettre à l'utilisateur d'isoler sur la carte les points d'intérêts présents : lac par exemple car facile à isoler
-
     _Test
     _Revoir les commentaires
     _Rapport !

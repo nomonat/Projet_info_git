@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="windowTitle">
+   <string>Accueil</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="mainLayout">
+
+    <!-- Image d'accueil -->
+    <item>
+     <widget class="QLabel" name="imageAccueil">
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="minimumHeight">
+       <number>450</number>
+      </property>
+     </widget>
+    </item>
+
+    <!-- Ligne nom de mission + zoom -->
+    <item>
+     <layout class="QHBoxLayout" name="nameZoomLayout">
+      <item>
+       <widget class="QLineEdit" name="missionName">
+        <property name="placeholderText">
+         <string>Nom de la mission</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="zoomLabel">
+        <property name="text">
+         <string>Zoom :</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="zoom_input">
+        <item>
+         <property name="text">
+          <string>11</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>12</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>13</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+     </layout>
+    </item>
+
+    <!-- Info Label -->
+    <item>
+     <widget class="QLabel" name="infoText">
+      <property name="text">
+       <string>Entrez une latitude entre 47.7 et 48.8&#10;et une longitude entre -5.1 et -3.2</string>
+      </property>
+     </widget>
+    </item>
+
+    <!-- Coordonnées -->
+    <item>
+     <layout class="QHBoxLayout" name="coordLayout">
+      <item>
+       <widget class="QLabel" name="labelLat">
+        <property name="text">
+         <string>Latitude :</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lat_input">
+        <property name="placeholderText">
+         <string>Latitude (ex: 48.0)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelLon">
+        <property name="text">
+         <string>Longitude :</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lon_input">
+        <property name="placeholderText">
+         <string>Longitude (ex: -4.5)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+
+    <!-- Bouton lancer -->
+    <item>
+     <widget class="QPushButton" name="launchButton">
+      <property name="text">
+       <string>Lancer</string>
+      </property>
+     </widget>
+    </item>
+
+    <!-- Conteneur circulaire du gif -->
+    <item>
+     <widget class="QFrame" name="gifFrame">
+      <property name="minimumSize">
+       <size>
+        <width>150</width>
+        <height>150</height>
+       </size>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+      <layout class="QVBoxLayout" name="gifLayout">
+       <item>
+        <widget class="QLabel" name="loadingAnimation"/>
+       </item>
+      </layout>
+     </widget>
+    </item>
+
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar"/>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="windowTitle">
+   <string>Mission</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+
+    <!-- Top Bar -->
+    <item>
+     <layout class="QHBoxLayout" name="topBarLayout">
+      <item>
+       <widget class="QPushButton" name="btnLaunch">
+        <property name="text">
+         <string>Lancer</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelMethod">
+        <property name="text">
+         <string>Méthode de vue :</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="comboMethod">
+        <item>
+         <property name="text">
+          <string>Satellite</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K-means</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Variance</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnApply">
+        <property name="text">
+         <string>Appliquer les filtres</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="btnTerrain">
+        <property name="text">
+         <string>Terrain</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="spacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Expanding</enum>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnSave">
+        <property name="text">
+         <string>Enregistrer la vue</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnQuit">
+        <property name="text">
+         <string>Fin de la mission</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+
+    <!-- Graphics View -->
+    <item>
+     <widget class="QGraphicsView" name="view"/>
+    </item>
+
+    <!-- Bottom Controls -->
+    <item>
+     <layout class="QHBoxLayout" name="bottomLayout">
+      <item>
+       <layout class="QGridLayout" name="directionLayout">
+        <item row="0" column="1">
+         <widget class="QPushButton" name="btnUp">
+          <property name="text">
+           <string>Haut</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QPushButton" name="btnLeft">
+          <property name="text">
+           <string>Gauche</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QPushButton" name="btnDown">
+          <property name="text">
+           <string>Bas</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QPushButton" name="btnRight">
+          <property name="text">
+           <string>Droite</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="coord_label">
+        <property name="text">
+         <string>Lat: 0.0000 | Lon: 0.0000</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
