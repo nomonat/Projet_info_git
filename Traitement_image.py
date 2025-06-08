@@ -25,6 +25,9 @@ class Traitement_image:
         self.trait_de_cote = None
         self.eaux_interieur=None
         self.mer=None
+        self.lacs=None
+        self.rivieres=None
+        self.sources=None
 
     def tracer_trait_de_cote(self):
         """
@@ -82,7 +85,6 @@ class Traitement_image:
         """
         self.eaux_interieur = self.aquatique & (~self.mer)
         return self.eaux_interieur
-
 
 class Kmean(Traitement_image):
     """Noam"""
@@ -201,23 +203,3 @@ class Moyenne_couleur(Traitement_image):
 
         _fill(self.arbre, 0, 0, self.hauteur, self.largeur)
         return final
-
-
-if __name__ == "__main__":
-    # Charger l'image avec ta classe Moyenne_couleur (ou Kmean)
-    mc = Moyenne_couleur("riviere.png")
-
-    # Calculer le trait de côte
-    mc.tracer_trait_de_cote()
-
-    # Le trait de côte est dans mc.trait_de_cote, un masque booléen
-    # Pour l'afficher, on va créer une image où le trait de côte est en rouge par exemple
-
-    # Copier l'image d'origine
-    img_mod = mc.img_array.copy()
-
-    # Colorier les pixels du trait de côte en rouge (R=255, G=0, B=0)
-    img_mod[mc.trait_de_cote] = [255, 0, 0]
-
-    # Convertir en image PIL et afficher
-    Image.fromarray(img_mod).show()
