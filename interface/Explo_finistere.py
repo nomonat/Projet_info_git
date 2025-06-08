@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import shutil
 import numpy as np
@@ -27,13 +26,16 @@ class CheckableMenu(QtWidgets.QMenu):
 
 
 class ExploWindow(object):
+    """Fenêtre d'exploration"""
     def __init__(self, mission_name, lat_ini, lon_ini, zoom):
+        """Initialisation de la classe"""
         self.mission_name = mission_name
         self.lat = lat_ini
         self.lon = lon_ini
         self.zoom = zoom
 
     def setupUi(self, MainWindow):
+        """"""
         MainWindow.setObjectName("MainWindow")
         MainWindow.setWindowTitle(f"Mission : {self.mission_name}")
         MainWindow.resize(1059, 843)
