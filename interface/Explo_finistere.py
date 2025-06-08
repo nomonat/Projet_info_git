@@ -129,7 +129,6 @@ class ExploWindow(object):
         tmp = "_tmp_mosaic.png"
         base.save(tmp)
         method = self.comboMethod.currentText()
-        print("=== Méthode sélectionnée :", method)
         if method == "Satellite":
             seg_img, helper = base.copy(), Traitement_image(tmp)
         elif method == "K-means":
