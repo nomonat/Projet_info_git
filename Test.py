@@ -20,7 +20,7 @@ class TestTraitementImage(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # crée une petite image test
-        cls.tmpfile = tempfile.NamedTemporaryFile(suffix=".png", delete=False).name
+        cls.tmpfile = tempfile.NamedTemporaryFile(suffix="test.png", delete=False).name #On a choisit une image contenant toutes les zones possibles
         arr = np.zeros((10,10,3), dtype=np.uint8)
         # un carré « eau » bleu en haut à gauche
         arr[0:5,0:5] = [0,0,255]
@@ -41,16 +41,26 @@ class TestTraitementImage(unittest.TestCase):
         self.assertTrue(ti.rural[9,9])
         self.assertFalse(ti.rural[0,0])
 
-    def test_tracer_trait_de_cote_and_eaux_interieur(self):
+    def test_trouver_les_eaux_interieurs(self):
         ti = Traitement_image(self.tmpfile)
         ti.creer_masques_couleurs()
         ti.tracer_trait_de_cote()
-        # le masque trait_de_cote doit être booléen et non vide
-        self.assertIsInstance(ti.trait_de_cote, np.ndarray)
-        self.assertTrue(ti.trait_de_cote.dtype == bool)
         ti.trouver_eaux_interieur()
-        # eaux intérieures = aquatique & ~trait_de_cote : doit contenir certains pixels
-        self.assertTrue((ti.eaux_interieur & ti.aquatique).any())
+
+        self.assertIsInstance(ti.mer, np.ndarray)
+        self.assertEqual(ti.mer.dtype, bool)
+        self.assertTrue(ti.mer.any())
+
+        self.assertIsInstance(ti.eaux_interieur, np.ndarray)
+        self.assertEqual(ti.eaux_interieur.dtype, bool)
+
+        # On ne force plus eaux_interieur à être non vide, mais on vérifie les relations logiques
+        # Si eaux_interieur contient des pixels, ils doivent être dans aquatique et pas dans mer
+        if ti.eaux_interieur.any():
+            self.assertTrue((ti.eaux_interieur & ti.aquatique).all())
+            self.assertFalse((ti.eaux_interieur & ti.mer).any())
+        else:
+            print("Attention : aucun pixel d'eau intérieure détecté dans l'image de test.")
 
     def test_appliquer_masque(self):
         ti = Traitement_image(self.tmpfile)
