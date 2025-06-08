@@ -14,8 +14,9 @@ from Drone import Drone
 from Traitement_image import Kmean, Moyenne_couleur, Traitement_image
 
 class CheckableMenu(QtWidgets.QMenu):
-    def __init__(self, parent=None):
+    def __init__(self,  parent=None):
         super().__init__(parent)
+
         widget = QtWidgets.QWidget(self)
         layout = QtWidgets.QVBoxLayout(widget)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -34,7 +35,12 @@ class CheckableMenu(QtWidgets.QMenu):
         self.addAction(action)
 
 
-class Ui_MainWindow(object):
+class ExploWindow(object):
+    def __init__(self, mission_name,lat_ini,lon_ini):
+        self.mission_name = mission_name
+        self.lat = lat_ini
+        self.lon = lon_ini
+
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1059, 843)
@@ -199,11 +205,12 @@ class Ui_MainWindow(object):
 
 
     def _capture(self):
-        lat_min, lon_min, lat_max, lon_max = 47.7, -5.1, 48.8, -3.2
-        lat = (lat_min + lat_max) / 2
-        lon = (lon_min + lon_max) / 2
+        # lat_min, lon_min, lat_max, lon_max = 47.7, -5.1, 48.8, -3.2
+        # lat = (lat_min + lat_max) / 2
+        # lon = (lon_min + lon_max) / 2
+
         zoom = int(self.comboBox.currentText().split(":")[1])
-        self.drone.capture_image(lat, lon, zoom)
+        self.drone.capture_image(self.lat, self.lon, zoom)
         self._show_base()
 
     def _move(self, direction):
@@ -235,7 +242,7 @@ if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
-    ui = Ui_MainWindow()
+    ui = ExploWindow('test',48,-4)
     ui.setupUi(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())

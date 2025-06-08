@@ -1,11 +1,19 @@
 # -*- coding: utf-8 -*-
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QRegion, QPainterPath
-from PyQt5.QtCore import QRect
-import subprocess
+from PyQt5.QtCore import QTimer
+
+
 import os
+
+from interface.Explo_finistere import CheckableMenu
+
+
 class Ui_MainWindow(object):
+
     def setupUi(self, MainWindow):
+        self.MainWindow = MainWindow
+
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1059, 1000)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -132,9 +140,22 @@ class Ui_MainWindow(object):
         if valid:
             self.gifFrame.setVisible(True)
             self.movie.start()
-            mission_name = self.missionName.text().strip() or "Mission"
-            print(mission_name)
-            sys.close()
+
+            # Lancer l'autre interface après 1 seconde
+            QTimer.singleShot(1000, lambda: self.emit_launch(lat, lon))
+
+    def emit_launch(self, lat, lon):
+        mission_name = self.missionName.text().strip() or "Mission"
+
+        # Ferme la fenêtre principale proprement
+        self.MainWindow.close()
+
+        # Lance l'autre interface directement
+        from interface.Explo_finistere import ExploWindow as ExploWindow
+        self.explo_main = QtWidgets.QMainWindow()
+        self.explo_ui = ExploWindow(mission_name, lat, lon)
+        self.explo_ui.setupUi(self.explo_main)
+        self.explo_main.show()
 
 if __name__ == "__main__":
     import sys
