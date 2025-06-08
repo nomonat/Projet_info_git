@@ -195,7 +195,11 @@ class ExploWindow(object):
         if not self.drone.captured_image:
             QMessageBox.warning(None, "Erreur", "Aucune image à enregistrer.")
             return
-        path, _ = QFileDialog.getSaveFileName(None, "Enregistrer la vue", "", "PNG (*.png)")
+
+        filtre = self.comboMethod.currentText().replace(" ", "_")
+        filename = f"{self.mission_name}_zoom{self.zoom}_{filtre}.png"
+
+        path, _ = QFileDialog.getSaveFileName(None, "Enregistrer la vue", filename, "PNG (*.png)")
         if path:
             self.view.grab().save(path, "PNG")
             QMessageBox.information(None, "Enregistré", f"Image sauvegardée dans :\n{path}")
