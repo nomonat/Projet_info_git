@@ -3,7 +3,6 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 from sklearn.cluster import KMeans
-import matplotlib.pyplot as plt
 
 class Traitement_image:
     def __init__(self, file: str):
@@ -12,10 +11,11 @@ class Traitement_image:
         self.hauteur, self.largeur, _ = self.img_array.shape
         self.rural = None
         self.urbain = None
-        self.marin = None
+        self.aquatique = None
         self.routes = None
         self.trait_de_cote = None
         self.eaux_interieur=None
+        self.mer=None
 
     def tracer_trait_de_cote(self, seuil: float = 0.5):
         """
@@ -55,7 +55,7 @@ class Traitement_image:
     def creer_masques_couleurs(self):
         """Crée les 4 masques issus de la segmentation (K-means ou Moyenne_couleur)."""
         arr = self.img_array
-        self.marin  = (arr[:, :, 0] == 0)   & (arr[:, :, 1] == 0)   & (arr[:, :, 2] == 255)
+        self.aquatique  = (arr[:, :, 0] == 0)   & (arr[:, :, 1] == 0)   & (arr[:, :, 2] == 255)
         self.rural  = (arr[:, :, 0] == 34)  & (arr[:, :, 1] == 139) & (arr[:, :, 2] == 34)
         self.urbain = (arr[:, :, 0] == 105) & (arr[:, :, 1] == 105) & (arr[:, :, 2] == 105)
         self.routes = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 215) & (arr[:, :, 2] == 0)
@@ -72,24 +72,41 @@ class Traitement_image:
 
     def trouver_eaux_interieur(self, seuil: float = 0.5) -> np.ndarray:
         """
-        Construit et renvoie un masque booléen des eaux intérieures,
-        c’est-à-dire tous les pixels marins (0,0,255) qui ne font pas
-        partie du trait de côte.
+        Reconstruit le masque de la "mer" comme l'ensemble des pixels bleus
+        (self.marin) connectés au bord de l'image, puis définit
+        l'eau intérieure comme les pixels marins non dans la mer.
+        Stocke dans :
+          - self.mer_mask       : masque booléen de la mer
+          - self.eaux_interieur : masque booléen des eaux intérieures
+        et retourne ce dernier.
         """
-        # 1) Assurer que self.marin et self.trait_de_cote sont prêts
-        if self.marin is None:
+        # 1) On s'assure d'avoir self.marin et self.trait_de_cote
+        if self.aquatique is None:
             self.creer_masques_couleurs()
         if self.trait_de_cote is None:
             self.tracer_trait_de_cote(seuil=seuil)
 
-        # 2) Eau intérieure = marin et pas trait de côte
-        mask_interieur = self.marin & (~self.trait_de_cote)
+        # 2) Labelisation de toutes les composantes d'eau
+        labels, ncomp = ndimage.label(self.aquatique)
 
-        # 3) Stockage
-        self.eaux_interieur = mask_interieur
+        # 3) On repère les labels qui touchent le bord → c'est la mer
+        mer_mask = np.zeros_like(self.aquatique)
+        h, w = self.aquatique.shape
+        # bord haut/bas
+        bord_labels = np.unique(labels[[0, h-1], :])
+        # bord gauche/droite
+        bord_labels = np.concatenate([bord_labels,
+                                      np.unique(labels[:, [0, w-1]])])
+        bord_labels = np.unique(bord_labels[bord_labels != 0])
 
-        # 4) Retour
-        return mask_interieur
+        # 4) Construire le masque mer
+        for lbl in bord_labels:
+            mer_mask |= (labels == lbl)
+        self.mer = mer_mask
+
+        # 5) L'eau intérieure = tout pixel marin qui n'est pas dans la mer
+        self.eaux_interieur = self.aquatique & (~self.mer)
+        return self.eaux_interieur
 
 
 class Kmean(Traitement_image):
