@@ -4,11 +4,6 @@ from PyQt5.QtGui import QRegion, QPainterPath
 from PyQt5.QtCore import QTimer
 
 
-import os
-
-from interface.Explo_finistere import CheckableMenu
-
-
 class Ui_MainWindow(object):
 
     def setupUi(self, MainWindow):

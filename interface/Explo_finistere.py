@@ -2,7 +2,6 @@
 import os
 import shutil
 import numpy as np
-from PIL import Image
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
