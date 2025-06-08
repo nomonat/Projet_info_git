@@ -5,3 +5,5 @@ A réaliser :
     _Méthode variance bien intégrée
     _Test
     _Coordonnées actualisées
+    _Revoir les commentaires
+    _Rapport !
