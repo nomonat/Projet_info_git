@@ -48,7 +48,7 @@ class ExploWindow(object):
         hlay.setContentsMargins(10, 10, 10, 10)
         hlay.setSpacing(20)
 
-        # lancement, méthode, appliquer, zoom, terrain, save, quit
+        #Création boutons
         self.btnLaunch = QtWidgets.QPushButton("Lancer", hlw)
         self.comboMethod = QtWidgets.QComboBox(hlw)
         self.comboMethod.addItems(["Satellite", "K-means", "Variance"])
@@ -62,7 +62,7 @@ class ExploWindow(object):
         self.btnSave = QtWidgets.QPushButton("Enregistrer la vue", hlw)
         self.btnQuit = QtWidgets.QPushButton("Fin de la mission", hlw)
 
-        # Conteneur horizontal pour comboMethod, btnTerrain et btnApply
+        #Conteneur horizontal pour comboMethod, btnTerrain et btnApply
         middle_widget = QtWidgets.QWidget(hlw)
         middle_layout = QtWidgets.QHBoxLayout(middle_widget)
         middle_layout.setContentsMargins(0, 0, 0, 0)
@@ -77,7 +77,7 @@ class ExploWindow(object):
             QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum))
         hlay.addWidget(self.btnSave)
         hlay.addWidget(self.btnQuit)
-        # ==== zone directionnelle ====
+        #Pavé direction
         glw = QtWidgets.QWidget(cw)
         glw.setGeometry(240, 700, 295, 80)
         gl = QtWidgets.QGridLayout(glw)
@@ -86,7 +86,7 @@ class ExploWindow(object):
         self.btnDown  = QtWidgets.QPushButton("Bas",glw);    gl.addWidget(self.btnDown,1,1)
         self.btnRight = QtWidgets.QPushButton("Droite",glw); gl.addWidget(self.btnRight,1,2)
 
-        # ==== vue image + coord label ====
+        #Affichage carte
         self.view = QtWidgets.QGraphicsView(cw)
         self.view.setGeometry(30, 200, 931, 481)
         # === légende à droite ===
@@ -128,18 +128,19 @@ class ExploWindow(object):
         MainWindow.setCentralWidget(cw)
         MainWindow.setStatusBar(QtWidgets.QStatusBar(MainWindow))
 
-        # connexions
+        #Connexions
         self.drone       = Drone()
-        self.btnLaunch.clicked.connect(self._capture)
-        self.btnLeft.clicked.connect(lambda: self._move("gauche"))
-        self.btnUp.clicked.connect(lambda: self._move("haut"))
-        self.btnDown.clicked.connect(lambda: self._move("bas"))
-        self.btnRight.clicked.connect(lambda: self._move("droite"))
-        self.btnApply.clicked.connect(self._process_and_display)
-        self.btnSave.clicked.connect(self._save)
-        self.btnQuit.clicked.connect(self._finish)
+        self.btnLaunch.clicked.connect(self.capture)
+        self.btnLeft.clicked.connect(lambda: self.move("gauche"))
+        self.btnUp.clicked.connect(lambda: self.move("haut"))
+        self.btnDown.clicked.connect(lambda: self.move("bas"))
+        self.btnRight.clicked.connect(lambda: self.move("droite"))
+        self.btnApply.clicked.connect(self.traitement_et_affichage)
+        self.btnSave.clicked.connect(self.save)
+        self.btnQuit.clicked.connect(self.finish)
 
-    def _display(self, pil_img):
+    def affichage(self, pil_img):
+        """Affichage de l'image"""
         data = pil_img.tobytes('raw','RGB')
         qimg = QtGui.QImage(data, pil_img.width, pil_img.height, QtGui.QImage.Format_RGB888)
         pix  = QtGui.QPixmap.fromImage(qimg)
@@ -148,18 +149,19 @@ class ExploWindow(object):
         self.view.setScene(scene)
         self.view.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio)
 
-    def _show_base(self):
+    def base(self):
+        """utilise la fonction recoller de Drone """
         base = self.drone.recoller()
         if base is not None:
-            self._display(base)
+            self.affichage(base)
 
-    def _process_and_display(self):
-        # 1) Reconstruire la mosaïque brute
+    def traitement_et_affichage(self):
+        #Reconstruire l'image satellite
         base = self.drone.recoller()
         if base is None:
             return
 
-        # 2) Segmentation / préparation du helper
+        #Application de la méthode de traitement utilisée
         tmp = "_tmp_mosaic.png"
         base.save(tmp)
         method = self.comboMethod.currentText()
@@ -172,16 +174,15 @@ class ExploWindow(object):
             seg_obj = Moyenne_couleur(tmp)
             seg_img, helper = seg_obj.img, seg_obj
 
-        # 3) Recharger les masques dans helper
+        #Recharger les masques dans helper
         helper.img       = seg_img
         helper.img_array = np.array(seg_img)
         helper.hauteur, helper.largeur = helper.img_array.shape[:2]
         helper.creer_masques_couleurs()
         helper.tracer_trait_de_cote()
-        # on construit aussi le masque des eaux intérieures
-        helper.trouver_eaux_interieur()  # doit remplir helper.eaux_interieur
+        helper.trouver_eaux_interieur()
 
-        # 4) Préparer le mapping case→(attribut, couleur)
+    #Préparation du  mapping
         filter_map = {
             "Rural":            ("rural",          (34, 139,  34)),
             "Urbain":           ("urbain",         (105,105, 105)),
@@ -189,45 +190,45 @@ class ExploWindow(object):
             "Routes":           ("routes",         (255,215,   0)),
             "Trait de côte":    ("trait_de_cote",  (255,  0,   0)),
             "Eaux intérieurs":  ("eaux_interieur", (  0, 255, 255)),
-            "Mer":("mer",(0,0,125)),
+            "Mer":              ("mer",            (0, 0, 125)),
         }
 
-        # 5) Si aucune case n'est cochée → on affiche la base
+        #Si aucune case n'est cochée, on affiche la base
         checks = self.terrainMenu.checkboxes
         if not any(cb.isChecked() for cb in checks):
-            return self._display(base)
+            return self.affichage(base)
 
-        # 6) Sinon on part de la mosaïque brute et on applique les filtres dans l’ordre visuel
+        #On ajoute les masques coché dans l'ordre de superposition
         img = base.copy()
         for cb in checks:
             if not cb.isChecked():
                 continue
-            name = cb.text()                    # ex. "Aquatique"
-            attr, color = filter_map[name]      # ex. ("marin", (0,0,255))
-            mask = getattr(helper, attr)        # helper.marin, helper.trait_de_cote, etc.
-            # mettre à jour le helper avec l'image courante
+            name = cb.text()
+            attr, color = filter_map[name]
+            mask = getattr(helper, attr)
             helper.img_array = np.array(img)
             helper.hauteur, helper.largeur = helper.img_array.shape[:2]
-            # appliquer le masque
             img = helper.appliquer_masque(mask, color)
 
-        # 7) Affichage final
-        self._display(img)
+        #Affichage final
+        self.affichage(img)
 
-    def _capture(self):
-
+    def capture(self):
+        """Utilise la méthode de capture d'image de Drone"""
         self.drone.capture_image(self.lat, self.lon, self.zoom)
         self.lat, self.lon = self.drone.get_coordinates()
         self.coord_label.setText(f"Lat: {self.lat:.4f} | Lon: {self.lon:.4f}")
-        self._show_base()
+        self.base()
 
-    def _move(self, direction):
+    def move(self, direction):
+        """Permet la capture de la tuile suivante avec le déplacement de Drone"""
         self.drone.deplacement(direction)
-        self._show_base()
+        self.base()
         self.lat, self.lon = self.drone.get_coordinates()
         self.coord_label.setText(f"Lat: {self.lat:.4f} | Lon: {self.lon:.4f}")
 
-    def _save(self):
+    def save(self):
+        """Enregistrement de l'image dans le fichier"""
         if not self.drone.captured_image:
             QMessageBox.warning(None, "Erreur", "Aucune image à enregistrer.")
             return
@@ -240,8 +241,8 @@ class ExploWindow(object):
             self.view.grab().save(path, "PNG")
             QMessageBox.information(None, "Enregistré", f"Image sauvegardée dans :\n{path}")
 
-    def _finish(self):
-        # nettoyage
+    def finish(self):
+        """Supprime les fichiers provisoires et ferme proprement la fenêtre"""
         if os.path.isdir("tiles"):
             shutil.rmtree("tiles")
         for f in ("mosaic.png","_tmp_mosaic.png","Kmean.png","Moyenne_couleur.png"):
