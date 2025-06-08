@@ -17,6 +17,9 @@ class Drone:
         self.captured_image = None
         self.visited_tiles = []
 
+    def get_coordinates(self):
+        return(self.lat, self.lon)
+
     def latlon_to_tile(self, lat, lon, zoom):
         """
         Convertit une paire (lat, lon) en indices de tuile (x, y)

@@ -111,6 +111,14 @@ class ExploWindow(object):
         # Vue image
         self.graphicsView = QtWidgets.QGraphicsView(self.centralwidget)
         self.graphicsView.setGeometry(QtCore.QRect(30, 200, 931, 481))
+        # Label des coordonnées (en bas à droite)
+        self.coord_label = QtWidgets.QLabel(self.centralwidget)
+        self.coord_label.setGeometry(QtCore.QRect(750, 700, 250, 30))
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.coord_label.setFont(font)
+        self.coord_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        self.coord_label.setText(f"Lat: {self.lat:.4f} | Lon: {self.lon:.4f}")
 
         MainWindow.setCentralWidget(self.centralwidget)
         MainWindow.setStatusBar(QtWidgets.QStatusBar(MainWindow))
@@ -212,11 +220,16 @@ class ExploWindow(object):
 
         zoom = int(self.comboBox.currentText().split(":")[1])
         self.drone.capture_image(self.lat, self.lon, zoom)
+        self.lat, self.lon = self.drone.get_coordinates()
+        self.coord_label.setText(f"Lat: {self.lat:.4f} | Lon: {self.lon:.4f}")
+
         self._show_base()
 
     def _move(self, direction):
         self.drone.deplacement(direction)
         self._show_base()
+        self.lat, self.lon = self.drone.get_coordinates()
+        self.coord_label.setText(f"Lat: {self.lat:.4f} | Lon: {self.lon:.4f}")
 
     def _save(self):
         if not self.drone.captured_image:
