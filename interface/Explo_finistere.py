@@ -16,7 +16,7 @@ class CheckableMenu(QtWidgets.QMenu):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(5)
         self.checkboxes = []
-        for name in ["Rural", "Urbain", "Aquatique", "Routes","Trait de côte","Eaux intérieurs"]:
+        for name in ["Rural", "Urbain", "Aquatique", "Routes","Trait de côte","Eaux intérieurs","Mer"]:
             cb = QtWidgets.QCheckBox(name)
             layout.addWidget(cb)
             self.checkboxes.append(cb)
@@ -149,10 +149,11 @@ class ExploWindow(object):
         filter_map = {
             "Rural":            ("rural",          (34, 139,  34)),
             "Urbain":           ("urbain",         (105,105, 105)),
-            "Aquatique":        ("marin",          (  0,   0, 255)),
+            "Aquatique":        ("aquatique",          (  0,   0, 255)),
             "Routes":           ("routes",         (255,215,   0)),
             "Trait de côte":    ("trait_de_cote",  (255,  0,   0)),
             "Eaux intérieurs":  ("eaux_interieur", (  0, 255, 255)),
+            "Mer":("mer",(0,0,125)),
         }
 
         # 5) Si aucune case n'est cochée → on affiche la base
