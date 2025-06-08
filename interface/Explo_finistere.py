@@ -17,7 +17,7 @@ class CheckableMenu(QtWidgets.QMenu):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(5)
         self.checkboxes = []
-        for name in ["Rural", "Urbain", "Aquatique", "Routes","Trait de côte","Eaux intérieurs"]:
+        for name in ["Trait de côte", "Rural", "Urbain", "Aquatique", "Routes"]:
             cb = QtWidgets.QCheckBox(name)
             layout.addWidget(cb)
             self.checkboxes.append(cb)
@@ -28,10 +28,11 @@ class CheckableMenu(QtWidgets.QMenu):
 
 
 class ExploWindow(object):
-    def __init__(self, mission_name, lat_ini, lon_ini):
+    def __init__(self, mission_name, lat_ini, lon_ini, zoom):
         self.mission_name = mission_name
         self.lat = lat_ini
         self.lon = lon_ini
+        self.zoom = zoom
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -50,14 +51,13 @@ class ExploWindow(object):
         self.btnLaunch  = QtWidgets.QPushButton("Lancer", hlw)
         self.comboMethod= QtWidgets.QComboBox(hlw)
         self.comboMethod.addItems(["Satellite", "K-means", "Variance"])
-        self.comboZoom  = QtWidgets.QComboBox(hlw)
-        self.comboZoom.addItems([f"Zoom : {z}" for z in (11, 12, 13)])
+        self.btnApply   = QtWidgets.QPushButton("Appliquer les filtres", hlw)
+
         self.btnTerrain = QtWidgets.QToolButton(hlw)
         self.btnTerrain.setText("Terrain")
         self.btnTerrain.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.terrainMenu= CheckableMenu(MainWindow)
         self.btnTerrain.setMenu(self.terrainMenu)
-        self.btnApply   = QtWidgets.QPushButton("Appliquer les filtres", hlw)
         self.btnSave    = QtWidgets.QPushButton("Enregistrer la vue", hlw)
         self.btnQuit    = QtWidgets.QPushButton("Fin de la mission", hlw)
 
@@ -65,7 +65,6 @@ class ExploWindow(object):
                   QtWidgets.QLabel("Méthode de vue :", hlw),
                   self.comboMethod,
                   self.btnApply,
-                  self.comboZoom,
                   self.btnTerrain):
             hlay.addWidget(w)
         hlay.addSpacerItem(QtWidgets.QSpacerItem(40,20,QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Minimum))
@@ -125,64 +124,68 @@ class ExploWindow(object):
         if base is None:
             return
 
-        # 2) Segmentation / préparation du helper
+        # 2) Choix de la méthode
         tmp = "_tmp_mosaic.png"
         base.save(tmp)
         method = self.comboMethod.currentText()
         if method == "Satellite":
             seg_img, helper = base.copy(), Traitement_image(tmp)
         elif method == "K-means":
-            seg_obj = Kmean(tmp)
-            seg_img, helper = seg_obj.segmented_img, seg_obj
-        else:  # "Variance"
-            seg_obj = Moyenne_couleur(tmp)
-            seg_img, helper = seg_obj.img, seg_obj
+            seg = Kmean(tmp);
+            seg_img, helper = seg.segmented_img, seg
+        else:  # Variance
+            seg_v = Moyenne_couleur(tmp);
+            seg_img, helper = seg_v.img, seg_v
 
-        # 3) Recharger les masques dans helper
-        helper.img       = seg_img
+        # 3) Initialisation des masques
+        helper.img = seg_img
         helper.img_array = np.array(seg_img)
         helper.hauteur, helper.largeur = helper.img_array.shape[:2]
         helper.creer_masques_couleurs()
-        helper.tracer_trait_de_cote()
-        # on construit aussi le masque des eaux intérieures
-        helper.trouver_eaux_interieur()  # doit remplir helper.eaux_interieur
 
-        # 4) Préparer le mapping case→(attribut, couleur)
-        filter_map = {
-            "Rural":            ("rural",          (34, 139,  34)),
-            "Urbain":           ("urbain",         (105,105, 105)),
-            "Aquatique":        ("marin",          (  0,   0, 255)),
-            "Routes":           ("routes",         (255,215,   0)),
-            "Trait de côte":    ("trait_de_cote",  (255,  0,   0)),
-            "Eaux intérieurs":  ("eaux_interieur", (  0, 255, 255)),
+        # 4) Préparer le trait de côte (mais on l'appliquera tout dernier)
+        helper.tracer_trait_de_cote()
+
+        # 5) Récupérer les cases cochées
+        checks = self.terrainMenu.checkboxes
+        names = ["trait_de_cote", "rural", "urbain", "marin", "routes"]
+        colors = {
+            "trait_de_cote": (255, 0, 0),
+            "rural": (34, 139, 34),
+            "urbain": (105, 105, 105),
+            "marin": (0, 0, 255),
+            "routes": (255, 215, 0),
         }
 
-        # 5) Si aucune case n'est cochée → on affiche la base
-        checks = self.terrainMenu.checkboxes
-        if not any(cb.isChecked() for cb in checks):
-            return self._display(base)
+        # 6) Appliquer d'abord les filtres terrain, puis le trait de côte
+        if any(cb.isChecked() for cb in checks):
+            img_courante = base.copy()
 
-        # 6) Sinon on part de la mosaïque brute et on applique les filtres dans l’ordre visuel
-        img = base.copy()
-        for cb in checks:
-            if not cb.isChecked():
-                continue
-            name = cb.text()                    # ex. "Aquatique"
-            attr, color = filter_map[name]      # ex. ("marin", (0,0,255))
-            mask = getattr(helper, attr)        # helper.marin, helper.trait_de_cote, etc.
-            # mettre à jour le helper avec l'image courante
-            helper.img_array = np.array(img)
-            helper.hauteur, helper.largeur = helper.img_array.shape[:2]
-            # appliquer le masque
-            img = helper.appliquer_masque(mask, color)
+            # 6a) terrain filters (skip trait_de_cote for l'instant)
+            for cb, attr in zip(checks[1:], names[1:]):
+                if not cb.isChecked():
+                    continue
+                # on met à jour helper sur l'image actuelle
+                helper.img_array = np.array(img_courante)
+                helper.hauteur, helper.largeur = helper.img_array.shape[:2]
+                img_courante = helper.appliquer_masque(getattr(helper, attr), colors[attr])
+
+            # 6b) trait de côte en dernier
+            if checks[0].isChecked():
+                helper.img_array = np.array(img_courante)
+                helper.hauteur, helper.largeur = helper.img_array.shape[:2]
+                img_courante = helper.appliquer_masque(helper.trait_de_cote, colors["trait_de_cote"])
+
+            to_show = img_courante
+        else:
+            to_show = base
 
         # 7) Affichage final
-        self._display(img)
-
+        self._display(to_show)
 
     def _capture(self):
-        zoom = int(self.comboZoom.currentText().split(":")[1])
-        self.drone.capture_image(self.lat, self.lon, zoom)
+
+        self.drone.capture_image(self.lat, self.lon, self.zoom)
         self.lat, self.lon = self.drone.get_coordinates()
         self.coord_label.setText(f"Lat: {self.lat:.4f} | Lon: {self.lon:.4f}")
         self._show_base()
