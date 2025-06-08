@@ -43,6 +43,7 @@ class ExploWindow(object):
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
+        MainWindow.setWindowTitle(f"Mission : {self.mission_name}")
         MainWindow.resize(1059, 843)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
 
